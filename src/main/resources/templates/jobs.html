@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Profiles - CareerBoost AI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link th:href="@{/css/style.css}" rel="stylesheet">
+    <style>
+        :root {
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --card-border: rgba(255, 255, 255, 0.08);
+        }
+        
+        .job-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .job-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(255, 255, 255, 0.18);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);
+        }
+        
+        .logo-box {
+            width: 55px;
+            height: 55px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            overflow: hidden;
+        }
+
+        .logo-box img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .filter-select {
+            background-color: rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid var(--card-border) !important;
+            color: var(--text-primary) !important;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+        
+        .filter-select option {
+            background-color: #1a1e29;
+            color: #fff;
+        }
+
+        .search-input-wrapper {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+        }
+
+        .ats-match-box {
+            background: rgba(13, 110, 253, 0.04);
+            border: 1px solid rgba(13, 110, 253, 0.12);
+            border-radius: 8px;
+            padding: 12px 16px;
+        }
+        
+        .ats-match-box.high-match {
+            background: rgba(25, 135, 84, 0.04);
+            border: 1px solid rgba(25, 135, 84, 0.12);
+        }
+
+        .ats-match-box.medium-match {
+            background: rgba(255, 193, 7, 0.04);
+            border: 1px solid rgba(255, 193, 7, 0.12);
+        }
+
+        .ats-match-box.low-match {
+            background: rgba(220, 53, 69, 0.04);
+            border: 1px solid rgba(220, 53, 69, 0.12);
+        }
+
+        .btn-apply {
+            background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+            color: white !important;
+            border: none;
+            border-radius: 8px;
+            padding: 7px 16px;
+            font-weight: 500;
+            font-size: 0.85rem;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-apply:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(13, 110, 253, 0.25);
+        }
+
+        .btn-save {
+            background: transparent;
+            color: var(--text-primary) !important;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 8px;
+            padding: 7px 16px;
+            font-weight: 500;
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-save:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        .page-link {
+            background: rgba(255, 255, 255, 0.03) !important;
+            border: 1px solid var(--card-border) !important;
+            color: var(--text-primary) !important;
+            transition: all 0.3s ease;
+        }
+        
+        .page-item.active .page-link {
+            background: #0d6efd !important;
+            border-color: #0d6efd !important;
+            color: white !important;
+        }
+        
+        .page-item.disabled .page-link {
+            opacity: 0.4;
+            color: var(--text-muted) !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <div class="sidebar">
+            <a class="sidebar-brand" th:href="@{/dashboard}">
+                <i class="bi bi-cpu ai-glow text-primary"></i>
+                <span>CareerBoost AI</span>
+            </a>
+            <ul class="sidebar-menu">
+                <li>
+                    <a class="sidebar-link" th:href="@{/dashboard}">
+                        <i class="bi bi-grid-fill"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li>
+                    <a class="sidebar-link" th:href="@{/resume/analyze}">
+                        <i class="bi bi-cloud-arrow-up-fill"></i>
+                        <span>Analyze Resume</span>
+                    </a>
+                </li>
+                <li>
+                    <a class="sidebar-link" th:href="@{/resume/my-resumes}">
+                        <i class="bi bi-file-earmark-person-fill"></i>
+                        <span>My Resumes</span>
+                    </a>
+                </li>
+                <li>
+                    <a class="sidebar-link active" th:href="@{/jobs}">
+                        <i class="bi bi-briefcase-fill"></i>
+                        <span>Job Profiles</span>
+                    </a>
+                </li>
+                <li th:if="${role == 'ROLE_ADMIN' || #strings.toString(role) == 'ROLE_ADMIN'}">
+                    <a class="sidebar-link" th:href="@{/admin}">
+                        <i class="bi bi-shield-lock-fill"></i>
+                        <span>Admin Console</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="main-content">
+            <!-- Header bar -->
+            <div class="top-navbar">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge badge-primary"><i class="bi bi-briefcase"></i> Job Directory</span>
+                </div>
+                <button class="theme-toggle-btn" id="theme-toggle">
+                    <i class="bi bi-sun-fill fs-5" id="sun-icon"></i>
+                    <i class="bi bi-moon-stars-fill fs-5 d-none" id="moon-icon"></i>
+                </button>
+            </div>
+
+            <!-- Page Title -->
+            <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+                <div>
+                    <h2 class="fw-bold mb-1">Target Job Roles Database</h2>
+                    <p class="text-secondary mb-0">Browse realistic CSE/IT opportunities and see how your resume scores against each role instantly.</p>
+                </div>
+                <a th:href="@{/resume/analyze}" class="btn btn-primary-custom"><i class="bi bi-cloud-arrow-up"></i> Upload New Resume</a>
+            </div>
+
+            <!-- Analyzing Resume Details banner (Requirement 4) -->
+            <div class="card-glass border-0 mb-4 p-3 rounded-3" th:if="${selectedResume != null}">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 text-secondary small">
+                    <div><i class="bi bi-shield-check text-primary me-2"></i><strong>Analyzing:</strong> <span class="text-white fw-semibold" th:text="${selectedResume.resumeName}">Resume V2</span></div>
+                    <div><strong>Resume Name:</strong> <span class="text-white" th:text="${selectedResume.resumeName}">Resume V2</span></div>
+                    <div><strong>Uploaded On:</strong> <span class="text-white" th:text="${#temporals.format(selectedResume.createdAt, 'dd MMM yyyy, hh:mm a')}">Date</span></div>
+                    <div><strong>Version:</strong> <span class="badge bg-primary text-white" th:text="'V' + ${selectedResume.versionNumber}">V2</span></div>
+                </div>
+            </div>
+
+            <!-- Search & Filters Panel -->
+            <form id="filterForm" th:action="@{/jobs}" method="GET" class="w-100">
+                <div class="card-glass border-0 mb-4 p-3">
+                    <!-- Search Input and Sorting -->
+                    <div class="row g-3 align-items-center mb-3">
+                        <div class="col-md-7 col-lg-8">
+                            <div class="input-group search-input-wrapper">
+                                <span class="input-group-text bg-transparent border-0"><i class="bi bi-search text-secondary"></i></span>
+                                <input type="text" name="search" class="form-control bg-transparent border-0 text-white" placeholder="Search by Job Title, Company, Skills, Description..." th:value="${search}">
+                            </div>
+                        </div>
+                        <div class="col-md-5 col-lg-4 d-flex justify-content-end align-items-center gap-2">
+                            <span class="text-secondary small fw-medium">Sort:</span>
+                            <select name="sortBy" class="form-select filter-select" onchange="document.getElementById('filterForm').submit()" style="width: auto; min-width: 140px;">
+                                <option value="latest" th:selected="${sortBy == 'latest'}">Latest Jobs</option>
+                                <option value="highestSalary" th:selected="${sortBy == 'highestSalary'}">Highest Salary</option>
+                                <option value="atsMatch" th:selected="${sortBy == 'atsMatch'}" th:disabled="${!hasResume}">Best ATS Match</option>
+                                <option value="companyName" th:selected="${sortBy == 'companyName'}">Company Name</option>
+                            </select>
+                            <button type="submit" class="btn btn-primary-custom px-3 py-2" style="font-size: 0.85rem;"><i class="bi bi-search"></i> Search</button>
+                        </div>
+                    </div>
+
+                    <!-- Multi-criteria Filter selections -->
+                    <div class="row g-2">
+                        <!-- Resume Selector (Requirement 9) -->
+                        <div class="col-sm-6 col-md-3 col-lg-2">
+                            <select name="resumeId" class="form-select filter-select w-100" onchange="document.getElementById('filterForm').submit()">
+                                <option th:each="r : ${resumesList}" th:value="${r.id}" th:text="${r.resumeName + ('Active'.equals(r.status) ? ' (Active)' : '')}" th:selected="${r.id == selectedResumeId}">Resume</option>
+                                <option th:if="${resumesList.isEmpty()}" value="" disabled selected>No Resumes</option>
+                            </select>
+                        </div>
+                        <!-- Company -->
+                        <div class="col-sm-6 col-md-3 col-lg-2">
+                            <select name="company" class="form-select filter-select w-100" onchange="document.getElementById('filterForm').submit()">
+                                <option value="All">All Companies</option>
+                                <option th:each="comp : ${companiesList}" th:value="${comp}" th:text="${comp}" th:selected="${comp == selectedCompany}">Company</option>
+                            </select>
+                        </div>
+                        <!-- Role -->
+                        <div class="col-sm-6 col-md-3 col-lg-2">
+                            <select name="role" class="form-select filter-select w-100" onchange="document.getElementById('filterForm').submit()">
+                                <option value="All">All Roles</option>
+                                <option th:each="r : ${rolesList}" th:value="${r}" th:text="${r}" th:selected="${r == selectedRole}">Role</option>
+                            </select>
+                        </div>
+                        <!-- Location -->
+                        <div class="col-sm-6 col-md-3 col-lg-2">
+                            <select name="location" class="form-select filter-select w-100" onchange="document.getElementById('filterForm').submit()">
+                                <option value="All">All Locations</option>
+                                <option th:each="loc : ${locationsList}" th:value="${loc}" th:text="${loc}" th:selected="${loc == selectedLocation}">Location</option>
+                            </select>
+                        </div>
+                        <!-- Skills filter (text search to match skills list) -->
+                        <div class="col-sm-6 col-md-3 col-lg-2">
+                            <input type="text" name="skills" class="form-control filter-select" placeholder="Filter by skill..." th:value="${selectedSkills}" onchange="document.getElementById('filterForm').submit()">
+                        </div>
+                        <!-- Experience -->
+                        <div class="col-sm-6 col-md-3 col-lg-2">
+                            <select name="experience" class="form-select filter-select w-100" onchange="document.getElementById('filterForm').submit()">
+                                <option value="All">All Experience</option>
+                                <option value="Internship" th:selected="${selectedExperience == 'Internship'}">Internship</option>
+                                <option value="0-1 Years" th:selected="${selectedExperience == '0-1 Years'}">0-1 Years</option>
+                                <option value="0-2 Years" th:selected="${selectedExperience == '0-2 Years'}">0-2 Years</option>
+                                <option value="0 Years" th:selected="${selectedExperience == '0 Years'}">Freshers (0 Yrs)</option>
+                            </select>
+                        </div>
+                        <!-- Salary -->
+                        <div class="col-sm-6 col-md-3 col-lg-2">
+                            <select name="salary" class="form-select filter-select w-100" onchange="document.getElementById('filterForm').submit()">
+                                <option value="All">All Salaries</option>
+                                <option value="month" th:selected="${selectedSalary == 'month'}">Stipends (Intern)</option>
+                                <option value="6 - 8 LPA" th:selected="${selectedSalary == '6 - 8 LPA'}">6 - 8 LPA</option>
+                                <option value="8 - 12 LPA" th:selected="${selectedSalary == '8 - 12 LPA'}">8 - 12 LPA</option>
+                                <option value="10 - 15 LPA" th:selected="${selectedSalary == '10 - 15 LPA'}">10 - 15 LPA</option>
+                                <option value="12 - 18 LPA" th:selected="${selectedSalary == '12 - 18 LPA'}">12 - 18 LPA</option>
+                                <option value="15 - 22 LPA" th:selected="${selectedSalary == '15 - 22 LPA'}">15 - 22 LPA</option>
+                            </select>
+                        </div>
+                        <!-- Remote Type -->
+                        <div class="col-sm-6 col-md-3 col-lg-2">
+                            <select name="workMode" class="form-select filter-select w-100" onchange="document.getElementById('filterForm').submit()">
+                                <option value="All">All Work Modes</option>
+                                <option value="Remote" th:selected="${selectedWorkMode == 'Remote'}">Remote</option>
+                                <option value="Hybrid" th:selected="${selectedWorkMode == 'Hybrid'}">Hybrid</option>
+                                <option value="On-site" th:selected="${selectedWorkMode == 'On-site'}">On-site</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top" style="border-color: rgba(255,255,255,0.06) !important;">
+                        <span class="text-secondary small fw-medium" th:text="${totalElements + ' Job Openings Found'}">0 Jobs Found</span>
+                        <a th:href="@{/jobs}" class="btn btn-sm btn-outline-secondary px-3 py-1" style="font-size: 0.75rem; border-color: rgba(255,255,255,0.1); color: var(--text-primary); text-decoration: none;">Clear All Filters</a>
+                    </div>
+                </div>
+            </form>
+
+            <!-- Job Catalog List -->
+            <div class="d-flex flex-column gap-3 mb-4" id="jobContainer">
+                <div th:each="dto : ${jobs}" class="job-card p-4">
+                    <!-- Upper Row: Logo, Title, Info, and Actions -->
+                    <div class="d-flex align-items-start justify-content-between gap-3 flex-wrap">
+                        <div class="d-flex align-items-start gap-3">
+                            <div class="logo-box">
+                                <img th:src="${dto.job.companyLogo}" alt="Logo">
+                            </div>
+                            <div>
+                                <h5 class="fw-bold mb-1 text-primary-custom" th:text="${dto.job.title}">Job Title</h5>
+                                <div class="d-flex align-items-center gap-2 mb-2 flex-wrap text-secondary small">
+                                    <span class="fw-bold text-white" th:text="${dto.job.company}">Company</span>
+                                    <span>•</span>
+                                    <span><i class="bi bi-geo-alt me-1"></i><span th:text="${dto.job.location}">Location</span></span>
+                                    <span>•</span>
+                                    <span class="badge bg-secondary bg-opacity-10 text-muted border border-secondary border-opacity-10 px-2 py-0.5" style="font-size: 0.7rem;" th:text="${dto.job.workMode}">Workmode</span>
+                                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-10 px-2 py-0.5" style="font-size: 0.7rem;" th:text="${dto.job.employmentType}">Type</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Apply & Save Actions -->
+                        <div class="d-flex align-items-center gap-2">
+                            <a th:href="@{/resume/analyze(jobId=${dto.job.id})}" class="btn-apply">
+                                <i class="bi bi-arrow-up-right-circle me-1.5"></i> Apply Now
+                            </a>
+                            <button type="button" class="btn-save" th:data-title="${dto.job.title}" onclick="toggleSaveJob(this)">
+                                <i class="bi bi-bookmark me-1.5"></i> <span>Save</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Middle Row: Salary, Experience -->
+                    <div class="row g-3 my-2 border-top border-bottom py-2" style="border-color: rgba(255, 255, 255, 0.05) !important;">
+                        <div class="col-6 col-md-4">
+                            <div class="text-secondary small"><i class="bi bi-cash-stack me-1.5 text-success"></i><strong>Salary:</strong> <span th:text="${dto.job.salary}">6 - 8 LPA</span></div>
+                        </div>
+                        <div class="col-6 col-md-4">
+                            <div class="text-secondary small"><i class="bi bi-clock-history me-1.5 text-info"></i><strong>Experience:</strong> <span th:text="${dto.job.experienceRequired}">0-1 Years</span></div>
+                        </div>
+                        <div class="col-12 col-md-4 text-md-end">
+                            <span class="text-secondary small"><i class="bi bi-calendar3 me-1.5 text-warning"></i>Posted recently</span>
+                        </div>
+                    </div>
+
+                    <!-- Required Skills Badges -->
+                    <div class="mt-2">
+                        <strong class="text-secondary small d-block mb-1">Required Core Skills:</strong>
+                        <div class="d-flex flex-wrap gap-1">
+                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-10 px-2 py-1 rounded" style="font-size: 0.75rem;" th:each="skill : ${#strings.listSplit(dto.job.requiredSkills, ',')}" th:text="${skill.trim()}">Skill</span>
+                        </div>
+                    </div>
+
+                    <!-- Preferred Skills Badges -->
+                    <div class="mt-2" th:if="${dto.job.preferredSkills != null && !dto.job.preferredSkills.isEmpty()}">
+                        <strong class="text-secondary small d-block mb-1">Preferred Advanced Skills:</strong>
+                        <div class="d-flex flex-wrap gap-1">
+                            <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-10 px-2 py-1 rounded" style="font-size: 0.75rem;" th:each="skill : ${#strings.listSplit(dto.job.preferredSkills, ',')}" th:text="${skill.trim()}">Skill</span>
+                        </div>
+                    </div>
+
+                    <!-- ATS Dynamic Match widget -->
+                    <div class="mt-3">
+                        <div th:class="'ats-match-box ' + (${dto.matchPercentage >= 80} ? 'high-match' : (${dto.matchPercentage >= 50} ? 'medium-match' : 'low-match'))">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="bi bi-shield-check fs-5 text-primary"></i>
+                                    <span class="fw-bold" style="font-size: 0.85rem; color: var(--text-primary);">ATS Compatibility Check</span>
+                                </div>
+                                <div>
+                                    <span class="badge" th:classappend="(${dto.matchPercentage >= 80} ? 'bg-success' : (${dto.matchPercentage >= 50} ? 'bg-warning text-dark' : 'bg-danger'))" style="font-size: 0.8rem;" th:text="${dto.matchPercentage + '% Match'}">0% Match</span>
+                                </div>
+                            </div>
+
+                            <!-- Progress Bar -->
+                            <div class="progress mb-2" style="height: 6px; background-color: rgba(255,255,255,0.05);">
+                                <div class="progress-bar" th:classappend="(${dto.matchPercentage >= 80} ? 'bg-success' : (${dto.matchPercentage >= 50} ? 'bg-warning' : 'bg-danger'))" role="progressbar" th:style="'width: ' + ${dto.matchPercentage} + '%'" th:aria-valuenow="${dto.matchPercentage}" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+
+                            <!-- Detailed Metrics -->
+                            <div th:if="${dto.hasResume}">
+                                <div class="row g-2 mt-2">
+                                    <div class="col-md-6">
+                                        <div class="small text-secondary mb-1"><strong>Matching Skills:</strong></div>
+                                        <div class="d-flex flex-wrap gap-1">
+                                            <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-10 px-2 py-0.5" style="font-size: 0.7rem;" th:each="sk : ${dto.matchingSkills}" th:text="${sk}">Java</span>
+                                            <span th:if="${dto.matchingSkills.isEmpty()}" class="text-muted small">None matched</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="small text-secondary mb-1"><strong>Missing Skills & Keywords:</strong></div>
+                                        <div class="d-flex flex-wrap gap-1">
+                                            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-10 px-2 py-0.5" style="font-size: 0.7rem;" th:each="sk : ${dto.missingSkills}" th:text="${sk}">React</span>
+                                            <span th:if="${dto.missingSkills.isEmpty()}" class="text-success small"><i class="bi bi-check-circle-fill"></i> No missing skills!</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="small text-secondary mt-2 border-top border-opacity-10 pt-2" style="border-color: rgba(255, 255, 255, 0.05) !important;">
+                                     <i class="bi bi-lightbulb text-warning me-1.5"></i><strong>Recommendation:</strong> <span th:text="${dto.applyRecommendation}">Recommendation...</span>
+                                </div>
+                            </div>
+                            
+                            <!-- If user has no resume -->
+                            <div th:if="${!dto.hasResume}" class="small text-secondary mt-1">
+                                 <i class="bi bi-info-circle me-1.5 text-info"></i><span th:text="${dto.applyRecommendation}">Upload resume...</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Collapsible Full details drawer -->
+                    <div class="mt-3">
+                         <button class="btn btn-link btn-sm p-0 text-decoration-none text-primary" type="button" data-bs-toggle="collapse" th:data-bs-target="'#descCollapse-' + ${dto.job.id}" aria-expanded="false" th:aria-controls="'descCollapse-' + ${dto.job.id}">
+                             <i class="bi bi-plus-circle me-1"></i> View Full Job Details & Responsibilities
+                         </button>
+                         
+                         <div class="collapse mt-3" th:id="'descCollapse-' + ${dto.job.id}">
+                             <div class="card card-body bg-transparent border-0 p-0 text-secondary" style="font-size: 0.85rem; line-height: 1.6;">
+                                  <div class="mb-3">
+                                       <h6 class="fw-bold text-white mb-1"><i class="bi bi-building-fill me-1.5"></i> About the Company</h6>
+                                       <p th:text="${dto.job.companyDescription}">Company info...</p>
+                                  </div>
+                                  <div class="mb-3">
+                                       <h6 class="fw-bold text-white mb-1"><i class="bi bi-file-earmark-text-fill me-1.5"></i> Job Description</h6>
+                                       <p th:text="${dto.job.description}">Description...</p>
+                                  </div>
+                                  <div class="mb-3" th:if="${dto.job.responsibilities != null && !dto.job.responsibilities.isEmpty()}">
+                                       <h6 class="fw-bold text-white mb-1"><i class="bi bi-check2-circle me-1.5"></i> Key Responsibilities</h6>
+                                       <ul class="ps-3 mb-0">
+                                            <li th:each="line : ${#strings.listSplit(dto.job.responsibilities, '\n')}" th:text="${line.replaceAll('^- ', '')}">Responsibility</li>
+                                       </ul>
+                                  </div>
+                                  <div class="mb-3" th:if="${dto.job.qualifications != null && !dto.job.qualifications.isEmpty()}">
+                                       <h6 class="fw-bold text-white mb-1"><i class="bi bi-award-fill me-1.5"></i> Qualifications Required</h6>
+                                       <p th:text="${dto.job.qualifications}">Qualifications...</p>
+                                  </div>
+                                  <div class="mb-0" th:if="${dto.job.keywords != null && !dto.job.keywords.isEmpty()}">
+                                       <h6 class="fw-bold text-white mb-1"><i class="bi bi-tags-fill me-1.5"></i> Target ATS Keywords</h6>
+                                       <div class="d-flex flex-wrap gap-1">
+                                            <span class="badge bg-secondary bg-opacity-20 text-light border border-secondary border-opacity-20 px-2 py-0.5" style="font-size: 0.7rem;" th:each="kw : ${#strings.listSplit(dto.job.keywords, ',')}" th:text="${kw.trim()}">Keyword</span>
+                                       </div>
+                                  </div>
+                             </div>
+                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Empty State -->
+            <div th:if="${totalElements == 0}" class="card-glass text-center p-5 mb-4">
+                 <i class="bi bi-search fs-1 text-secondary mb-3 d-block"></i>
+                 <h5 class="fw-bold text-white">No Job Profiles Match Your Filters</h5>
+                 <p class="text-secondary small">Try adjusting your search keywords, clear filters, or select different criteria.</p>
+                 <a th:href="@{/jobs}" class="btn btn-primary-custom mt-2"><i class="bi bi-arrow-clockwise"></i> Reset Directory</a>
+            </div>
+
+            <!-- Pagination Footer -->
+            <nav aria-label="Page navigation" th:if="${totalPages > 1}" class="mt-4">
+                <ul class="pagination justify-content-center gap-1">
+                    <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled'">
+                        <a class="page-link rounded" th:href="@{/jobs(search=${search},company=${selectedCompany},role=${selectedRole},location=${selectedLocation},skills=${selectedSkills},experience=${selectedExperience},salary=${selectedSalary},workMode=${selectedWorkMode},sortBy=${sortBy},page=${currentPage - 1},size=${pageSize})}">
+                            <i class="bi bi-chevron-left"></i> Prev
+                        </a>
+                    </li>
+                    <li class="page-item" th:each="p : ${#numbers.sequence(0, totalPages - 1)}" th:classappend="${currentPage == p} ? 'active'">
+                        <a class="page-link rounded" th:href="@{/jobs(search=${search},company=${selectedCompany},role=${selectedRole},location=${selectedLocation},skills=${selectedSkills},experience=${selectedExperience},salary=${selectedSalary},workMode=${selectedWorkMode},sortBy=${sortBy},page=${p},size=${pageSize})}" th:text="${p + 1}">1</a>
+                    </li>
+                    <li class="page-item" th:classappend="${currentPage == totalPages - 1} ? 'disabled'">
+                        <a class="page-link rounded" th:href="@{/jobs(search=${search},company=${selectedCompany},role=${selectedRole},location=${selectedLocation},skills=${selectedSkills},experience=${selectedExperience},salary=${selectedSalary},workMode=${selectedWorkMode},sortBy=${sortBy},page=${currentPage + 1},size=${pageSize})}">
+                            Next <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
+        <div id="saveToast" class="toast align-items-center text-white bg-dark border-0" role="alert" aria-live="assertive" aria-atomic="true" style="background-color: #1a1e29 !important; border: 1px solid rgba(255,255,255,0.08) !important;">
+            <div class="d-flex">
+                <div class="toast-body" id="toastMessage">
+                    Saved
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script th:src="@{/js/main.js}"></script>
+    <script>
+        function toggleSaveJob(btn) {
+            const jobTitle = btn.getAttribute('data-title');
+            const icon = btn.querySelector('i');
+            const span = btn.querySelector('span');
+            if (icon.classList.contains('bi-bookmark')) {
+                icon.classList.remove('bi-bookmark');
+                icon.classList.add('bi-bookmark-fill');
+                icon.classList.add('text-warning');
+                span.textContent = 'Saved';
+                showToast(`Job "${jobTitle}" has been saved to your profile!`);
+            } else {
+                icon.classList.remove('bi-bookmark-fill');
+                icon.classList.remove('text-warning');
+                icon.classList.add('bi-bookmark');
+                span.textContent = 'Save';
+                showToast(`Job "${jobTitle}" has been removed from saved list.`);
+            }
+        }
+
+        function showToast(message) {
+            const toastEl = document.getElementById('saveToast');
+            const toastBody = document.getElementById('toastMessage');
+            toastBody.innerHTML = `<i class="bi bi-check-circle-fill text-success me-2"></i>${message}`;
+            
+            const toast = new bootstrap.Toast(toastEl, { delay: 3500 });
+            toast.show();
+        }
+    </script>
+</body>
+</html>

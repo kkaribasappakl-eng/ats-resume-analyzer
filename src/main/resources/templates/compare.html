@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compare Resumes - CareerBoost AI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link th:href="@{/css/style.css}" rel="stylesheet">
+    <style>
+        .comparison-table th {
+            width: 20%;
+            font-weight: 700;
+            color: var(--text-secondary);
+            border-bottom-color: rgba(255,255,255,0.08) !important;
+            vertical-align: top;
+            padding-top: 15px;
+            padding-bottom: 15px;
+        }
+        .comparison-table td {
+            width: 40%;
+            border-bottom-color: rgba(255,255,255,0.05) !important;
+            vertical-align: top;
+            padding-top: 15px;
+            padding-bottom: 15px;
+        }
+        .score-huge {
+            font-size: 3rem;
+            font-weight: 800;
+            line-height: 1;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <div class="sidebar">
+            <a class="sidebar-brand" th:href="@{/dashboard}">
+                <i class="bi bi-cpu ai-glow text-primary"></i>
+                <span>CareerBoost AI</span>
+            </a>
+            <ul class="sidebar-menu">
+                <li>
+                    <a class="sidebar-link" th:href="@{/dashboard}">
+                        <i class="bi bi-grid-fill"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li>
+                    <a class="sidebar-link active" th:href="@{/resume/my-resumes}">
+                        <i class="bi bi-file-earmark-person-fill"></i>
+                        <span>My Resumes</span>
+                    </a>
+                </li>
+                <li>
+                    <a class="sidebar-link" th:href="@{/jobs}">
+                        <i class="bi bi-briefcase-fill"></i>
+                        <span>Job Profiles</span>
+                    </a>
+                </li>
+                <li th:if="${role == 'ROLE_ADMIN' || #strings.toString(role) == 'ROLE_ADMIN'}">
+                    <a class="sidebar-link" th:href="@{/admin}">
+                        <i class="bi bi-shield-lock-fill"></i>
+                        <span>Admin Console</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="main-content">
+            <!-- Header bar -->
+            <div class="top-navbar">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge badge-primary"><i class="bi bi-layout-split"></i> Resume Comparison</span>
+                    <a th:href="@{/resume/my-resumes}" class="btn btn-outline-secondary btn-sm py-1 border-0" style="color: var(--text-primary);"><i class="bi bi-arrow-left"></i> Back</a>
+                </div>
+                <button class="theme-toggle-btn" id="theme-toggle">
+                    <i class="bi bi-sun-fill fs-5" id="sun-icon"></i>
+                    <i class="bi bi-moon-stars-fill fs-5 d-none" id="moon-icon"></i>
+                </button>
+            </div>
+
+            <!-- Page Title -->
+            <div class="mb-4">
+                <h2 class="fw-bold mb-1">Side-by-Side Version Comparison</h2>
+                <p class="text-secondary mb-0">Evaluate structural upgrades, skill expansions, and score changes between two of your uploaded resumes.</p>
+            </div>
+
+            <!-- Selectors Panel -->
+            <div class="card-glass border-0 p-3 mb-4">
+                <form th:action="@{/resume/compare}" method="get" class="row g-3 align-items-center">
+                    <div class="col-md-5">
+                        <label class="form-label small text-secondary">Resume 1 (Base Version)</label>
+                        <select name="id1" class="form-select filter-select bg-dark text-white border-secondary" required style="border-radius: 8px;">
+                            <option value="" disabled>-- Select Resume 1 --</option>
+                            <option th:each="r : ${resumes}" th:value="${r.id}" th:text="${r.resumeName + ' (V' + r.versionNumber + ' - ' + r.atsScore + '%)'}" th:selected="${resume1 != null && r.id == resume1.id}">Resume</option>
+                        </select>
+                    </div>
+                    <div class="col-md-5">
+                        <label class="form-label small text-secondary">Resume 2 (Target Version)</label>
+                        <select name="id2" class="form-select filter-select bg-dark text-white border-secondary" required style="border-radius: 8px;">
+                            <option value="" disabled>-- Select Resume 2 --</option>
+                            <option th:each="r : ${resumes}" th:value="${r.id}" th:text="${r.resumeName + ' (V' + r.versionNumber + ' - ' + r.atsScore + '%)'}" th:selected="${resume2 != null && r.id == resume2.id}">Resume</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end h-100 mt-md-4">
+                        <button type="submit" class="btn btn-primary-custom w-100 py-2.5 fw-semibold" style="border-radius: 8px; font-size: 0.85rem;"><i class="bi bi-shuffle me-1"></i> Compare</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Comparison Dashboard -->
+            <div th:if="${resume1 != null && resume2 != null}" class="card-glass border-0 p-4">
+                <div class="table-responsive">
+                    <table class="table table-dark comparison-table align-top mb-0" style="--bs-table-bg: transparent; border-color: rgba(255,255,255,0.05);">
+                        <thead>
+                            <tr style="border-bottom: 2px solid rgba(255,255,255,0.1);">
+                                <th class="py-3">Feature</th>
+                                <th class="py-3 text-start">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="badge bg-secondary" th:text="'V' + ${resume1.versionNumber}">V1</div>
+                                        <span class="text-white fw-bold fs-5" th:text="${resume1.resumeName}">Resume Name</span>
+                                    </div>
+                                    <small class="text-muted d-block mt-1" th:text="'Uploaded: ' + ${#temporals.format(resume1.createdAt, 'dd MMM yyyy, hh:mm a')}"></small>
+                                </th>
+                                <th class="py-3 text-start">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="badge bg-primary" th:text="'V' + ${resume2.versionNumber}">V2</div>
+                                        <span class="text-white fw-bold fs-5" th:text="${resume2.resumeName}">Resume Name</span>
+                                    </div>
+                                    <small class="text-muted d-block mt-1" th:text="'Uploaded: ' + ${#temporals.format(resume2.createdAt, 'dd MMM yyyy, hh:mm a')}"></small>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- 1. ATS Score -->
+                            <tr>
+                                <th>ATS Overall Score</th>
+                                <td>
+                                    <div th:class="'score-huge ' + (${resume1.atsScore >= 80} ? 'text-success' : (${resume1.atsScore >= 60} ? 'text-warning' : 'text-danger'))" th:text="${resume1.atsScore + '%'}">0%</div>
+                                    <div class="progress mt-2" style="height: 6px; max-width: 200px; background-color: rgba(255,255,255,0.05);">
+                                        <div class="progress-bar" th:classappend="(${resume1.atsScore >= 80} ? 'bg-success' : (${resume1.atsScore >= 60} ? 'bg-warning' : 'bg-danger'))" role="progressbar" th:style="'width: ' + ${resume1.atsScore} + '%'"></div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div th:class="'score-huge ' + (${resume2.atsScore >= 80} ? 'text-success' : (${resume2.atsScore >= 60} ? 'text-warning' : 'text-danger'))">
+                                        <span th:text="${resume2.atsScore + '%'}">0%</span>
+                                        <!-- Score Difference Badge -->
+                                        <span th:if="${resume2.atsScore - resume1.atsScore > 0}" class="badge bg-success text-white ms-2 fs-6" style="vertical-align: middle;">
+                                            <i class="bi bi-caret-up-fill"></i> <span th:text="'+' + (${resume2.atsScore - resume1.atsScore})"></span>
+                                        </span>
+                                        <span th:if="${resume2.atsScore - resume1.atsScore < 0}" class="badge bg-danger text-white ms-2 fs-6" style="vertical-align: middle;">
+                                            <i class="bi bi-caret-down-fill"></i> <span th:text="${resume2.atsScore - resume1.atsScore}"></span>
+                                        </span>
+                                    </div>
+                                    <div class="progress mt-2" style="height: 6px; max-width: 200px; background-color: rgba(255,255,255,0.05);">
+                                        <div class="progress-bar" th:classappend="(${resume2.atsScore >= 80} ? 'bg-success' : (${resume2.atsScore >= 60} ? 'bg-warning' : 'bg-danger'))" role="progressbar" th:style="'width: ' + ${resume2.atsScore} + '%'"></div>
+                                    </div>
+                                </td>
+                            </tr>
+                            
+                            <!-- 2. Skills -->
+                            <tr>
+                                <th>Matched Skills</th>
+                                <td>
+                                    <div class="d-flex flex-wrap gap-1">
+                                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-10 px-2 py-0.5" style="font-size: 0.75rem;" th:each="sk : ${#strings.listSplit(resume1.skillsFound, ',')}" th:text="${sk.trim()}">Skill</span>
+                                        <span th:if="${resume1.skillsFound == null || resume1.skillsFound.isEmpty()}" class="text-muted small">No matches found.</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="d-flex flex-wrap gap-1">
+                                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-10 px-2 py-0.5" style="font-size: 0.75rem;" th:each="sk : ${#strings.listSplit(resume2.skillsFound, ',')}" th:text="${sk.trim()}">Skill</span>
+                                        <span th:if="${resume2.skillsFound == null || resume2.skillsFound.isEmpty()}" class="text-muted small">No matches found.</span>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- 3. Missing Skills / Keywords -->
+                            <tr>
+                                <th>Missing Skills</th>
+                                <td>
+                                    <div class="d-flex flex-wrap gap-1">
+                                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-10 px-2 py-0.5" style="font-size: 0.75rem;" th:each="sk : ${#strings.listSplit(resume1.skillsMissing, ',')}" th:text="${sk.trim()}">Skill</span>
+                                        <span th:if="${resume1.skillsMissing == null || resume1.skillsMissing.isEmpty()}" class="text-success small"><i class="bi bi-check-circle"></i> None</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="d-flex flex-wrap gap-1">
+                                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-10 px-2 py-0.5" style="font-size: 0.75rem;" th:each="sk : ${#strings.listSplit(resume2.skillsMissing, ',')}" th:text="${sk.trim()}">Skill</span>
+                                        <span th:if="${resume2.skillsMissing == null || resume2.skillsMissing.isEmpty()}" class="text-success small"><i class="bi bi-check-circle"></i> None</span>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- 4. Missing Sections -->
+                            <tr>
+                                <th>Missing Sections</th>
+                                <td>
+                                    <div class="d-flex flex-wrap gap-1">
+                                        <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-10 px-2 py-0.5" style="font-size: 0.75rem;" th:each="sec : ${#strings.listSplit(resume1.missingSections, ',')}" th:text="${sec.trim()}">Section</span>
+                                        <span th:if="${resume1.missingSections == null || resume1.missingSections.isEmpty()}" class="text-success small"><i class="bi bi-check-circle"></i> None. All sections present!</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="d-flex flex-wrap gap-1">
+                                        <span class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-10 px-2 py-0.5" style="font-size: 0.75rem;" th:each="sec : ${#strings.listSplit(resume2.missingSections, ',')}" th:text="${sec.trim()}">Section</span>
+                                        <span th:if="${resume2.missingSections == null || resume2.missingSections.isEmpty()}" class="text-success small"><i class="bi bi-check-circle"></i> None. All sections present!</span>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- 5. Formatting Score -->
+                            <tr>
+                                <th>Formatting Integrity</th>
+                                <td>
+                                    <span class="fw-bold" th:text="${resume1.formattingScore != null ? resume1.formattingScore + '%' : 'N/A'}">Formatting</span>
+                                    <div class="progress mt-1" style="height: 4px; max-width: 150px; background-color: rgba(255,255,255,0.05);">
+                                        <div class="progress-bar bg-info" role="progressbar" th:style="'width: ' + ${resume1.formattingScore != null ? resume1.formattingScore : 0} + '%'"></div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="fw-bold" th:text="${resume2.formattingScore != null ? resume2.formattingScore + '%' : 'N/A'}">Formatting</span>
+                                    <div class="progress mt-1" style="height: 4px; max-width: 150px; background-color: rgba(255,255,255,0.05);">
+                                        <div class="progress-bar bg-info" role="progressbar" th:style="'width: ' + ${resume2.formattingScore != null ? resume2.formattingScore : 0} + '%'"></div>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- 6. Projects Score -->
+                            <tr>
+                                <th>Projects Score</th>
+                                <td>
+                                    <span class="fw-bold" th:text="${resume1.projectScore != null ? resume1.projectScore + '%' : 'N/A'}">Projects</span>
+                                    <div class="progress mt-1" style="height: 4px; max-width: 150px; background-color: rgba(255,255,255,0.05);">
+                                        <div class="progress-bar bg-primary" role="progressbar" th:style="'width: ' + ${resume1.projectScore != null ? resume1.projectScore : 0} + '%'"></div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="fw-bold" th:text="${resume2.projectScore != null ? resume2.projectScore + '%' : 'N/A'}">Projects</span>
+                                    <div class="progress mt-1" style="height: 4px; max-width: 150px; background-color: rgba(255,255,255,0.05);">
+                                        <div class="progress-bar bg-primary" role="progressbar" th:style="'width: ' + ${resume2.projectScore != null ? resume2.projectScore : 0} + '%'"></div>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- 7. Certifications Score -->
+                            <tr>
+                                <th>Certifications Score</th>
+                                <td>
+                                    <span class="fw-bold" th:text="${resume1.certificationsScore != null ? resume1.certificationsScore + '%' : 'N/A'}">Certifications</span>
+                                    <div class="progress mt-1" style="height: 4px; max-width: 150px; background-color: rgba(255,255,255,0.05);">
+                                        <div class="progress-bar bg-warning" role="progressbar" th:style="'width: ' + ${resume1.certificationsScore != null ? resume1.certificationsScore : 0} + '%'"></div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="fw-bold" th:text="${resume2.certificationsScore != null ? resume2.certificationsScore + '%' : 'N/A'}">Certifications</span>
+                                    <div class="progress mt-1" style="height: 4px; max-width: 150px; background-color: rgba(255,255,255,0.05);">
+                                        <div class="progress-bar bg-warning" role="progressbar" th:style="'width: ' + ${resume2.certificationsScore != null ? resume2.certificationsScore : 0} + '%'"></div>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- 8. Added & Removed Skills Detail Row -->
+                            <tr>
+                                <th>Skills Comparison Details</th>
+                                <td colspan="2">
+                                    <div class="row g-3">
+                                        <div class="col-md-6 border-end" style="border-color: rgba(255,255,255,0.05) !important;">
+                                            <h6 class="fw-bold text-success small mb-2"><i class="bi bi-plus-circle me-1"></i> Skills Added in V<span th:text="${resume2.versionNumber}">2</span></h6>
+                                            <div id="addedSkillsContainer" class="d-flex flex-wrap gap-1"></div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h6 class="fw-bold text-danger small mb-2"><i class="bi bi-dash-circle me-1"></i> Skills Removed in V<span th:text="${resume2.versionNumber}">2</span></h6>
+                                            <div id="removedSkillsContainer" class="d-flex flex-wrap gap-1"></div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Empty state when selectors are not chosen -->
+            <div th:if="${resume1 == null || resume2 == null}" class="card-glass text-center p-5">
+                 <i class="bi bi-shuffle fs-1 text-secondary mb-3 d-block"></i>
+                 <h5 class="fw-bold text-white">Select Resume Versions to Compare</h5>
+                 <p class="text-secondary small">Choose two separate uploaded resume entries above to trigger structural and keyword side-by-side audits.</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script th:src="@{/js/main.js}"></script>
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        document.addEventListener('DOMContentLoaded', () => {
+            const skills1 = /*[[${resume1 != null ? resume1.skillsFound : ''}]]*/ '';
+            const skills2 = /*[[${resume2 != null ? resume2.skillsFound : ''}]]*/ '';
+            
+            if (skills1 || skills2) {
+                const set1 = new Set((skills1 || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean));
+                const set2 = new Set((skills2 || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean));
+                
+                const added = [];
+                const removed = [];
+                
+                set2.forEach(s => {
+                    if (!set1.has(s)) {
+                        added.push(s);
+                    }
+                });
+                
+                set1.forEach(s => {
+                    if (!set2.has(s)) {
+                        removed.push(s);
+                    }
+                });
+                
+                const addedContainer = document.getElementById('addedSkillsContainer');
+                if (addedContainer) {
+                    if (added.length > 0) {
+                        added.forEach(s => {
+                            const badge = document.createElement('span');
+                            badge.className = 'badge bg-success bg-opacity-10 text-success border border-success border-opacity-10 px-2 py-1 rounded';
+                            badge.style.fontSize = '0.75rem';
+                            badge.textContent = s.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                            addedContainer.appendChild(badge);
+                        });
+                    } else {
+                        addedContainer.innerHTML = '<span class="text-secondary small">No new skills added.</span>';
+                    }
+                }
+                
+                const removedContainer = document.getElementById('removedSkillsContainer');
+                if (removedContainer) {
+                    if (removed.length > 0) {
+                        removed.forEach(s => {
+                            const badge = document.createElement('span');
+                            badge.className = 'badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-10 px-2 py-1 rounded';
+                            badge.style.fontSize = '0.75rem';
+                            badge.textContent = s.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                            removedContainer.appendChild(badge);
+                        });
+                    } else {
+                        removedContainer.innerHTML = '<span class="text-secondary small">No skills removed.</span>';
+                    }
+                }
+            }
+        });
+        /*]]>*/
+    </script>
+</body>
+</html>

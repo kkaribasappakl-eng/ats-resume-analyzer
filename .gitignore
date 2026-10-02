@@ -1,0 +1,41 @@
+# Target build output
+target/
+*.jar
+*.war
+*.ear
+*.rar
+
+# IDE & Editor files
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+*.factorypath
+
+# Environment & local properties
+.env
+application-local.properties
+application-local.yml
+*.env.local
+
+# Maven local binary downloads / logs
+apache-maven-3.9.6/
+maven/
+maven.zip
+*.log
+*.sys
+*.tmp
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Secrets & Credentials
+secrets/
+credentials/
+*.pem
+*.pkcs12
+*.p12
+*.jks

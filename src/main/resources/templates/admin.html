@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Console - CareerBoost AI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link th:href="@{/css/style.css}" rel="stylesheet">
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <div class="sidebar">
+            <a class="sidebar-brand" th:href="@{/dashboard}">
+                <i class="bi bi-cpu ai-glow text-primary"></i>
+                <span>CareerBoost AI</span>
+            </a>
+            <ul class="sidebar-menu">
+                <li>
+                    <a class="sidebar-link" th:href="@{/dashboard}">
+                        <i class="bi bi-grid-fill"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li>
+                    <a class="sidebar-link" th:href="@{/resume/analyze}">
+                        <i class="bi bi-cloud-arrow-up-fill"></i>
+                        <span>Analyze Resume</span>
+                    </a>
+                </li>
+                <li>
+                    <a class="sidebar-link" th:href="@{/jobs}">
+                        <i class="bi bi-briefcase-fill"></i>
+                        <span>Job Profiles</span>
+                    </a>
+                </li>
+                <li th:if="${role == 'ROLE_ADMIN' || #strings.toString(role) == 'ROLE_ADMIN'}">
+                    <a class="sidebar-link active" th:href="@{/admin}">
+                        <i class="bi bi-shield-lock-fill"></i>
+                        <span>Admin Console</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="main-content">
+            <!-- Header bar -->
+            <div class="top-navbar">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge badge-primary"><i class="bi bi-shield-lock"></i> Administrative Access</span>
+                </div>
+                <button class="theme-toggle-btn" id="theme-toggle">
+                    <i class="bi bi-sun-fill fs-5" id="sun-icon"></i>
+                    <i class="bi bi-moon-stars-fill fs-5 d-none" id="moon-icon"></i>
+                </button>
+            </div>
+
+            <!-- Page Title -->
+            <div class="mb-4">
+                <h2 class="fw-bold mb-1">Administrative Console</h2>
+                <p class="text-secondary mb-0">Manage job postings, review user activity scans, and view platform metrics.</p>
+            </div>
+
+            <!-- Metrics Row -->
+            <div class="row g-4 mb-4">
+                <div class="col-md-4">
+                    <div class="card-glass border-0 text-center py-4">
+                        <i class="bi bi-people fs-2 text-primary d-block mb-2"></i>
+                        <h2 class="fw-bold mb-1" th:text="${totalUsers}">0</h2>
+                        <p class="text-secondary small mb-0">Total Platform Users</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card-glass border-0 text-center py-4">
+                        <i class="bi bi-file-earmark-bar-graph fs-2 text-info d-block mb-2"></i>
+                        <h2 class="fw-bold mb-1" th:text="${totalResumes}">0</h2>
+                        <p class="text-secondary small mb-0">Resumes Audited</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card-glass border-0 text-center py-4">
+                        <i class="bi bi-speedometer2 fs-2 text-warning d-block mb-2"></i>
+                        <h2 class="fw-bold mb-1 text-warning" th:text="${avgAtsScore + '%'}">0%</h2>
+                        <p class="text-secondary small mb-0">Global Avg ATS Match</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recruiter Screening & Ranking Panel -->
+            <div class="card-glass border-0 mb-4 p-4">
+                <h4 class="fw-bold mb-3"><i class="bi bi-shield-check text-success me-2"></i> Recruiter Candidate Screener & Ranker</h4>
+                <p class="text-secondary small mb-4">Upload a batch of resumes (PDF/DOCX) to automatically screen and rank them against a target job profile using real-time scoring.</p>
+                
+                <form th:action="@{/admin/recruiter/upload}" method="post" enctype="multipart/form-data" class="mb-4">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-5">
+                            <label class="form-label fw-semibold small text-secondary">1. Select Target Job Profile</label>
+                            <select name="jobId" class="form-select bg-transparent text-white border-secondary" required style="border-radius: 10px;">
+                                <option value="" disabled selected class="bg-dark">Select a Job Profile</option>
+                                <option th:each="job : ${jobs}" th:value="${job.id}" th:text="${job.title + ' at ' + job.company}" class="bg-dark"></option>
+                            </select>
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label fw-semibold small text-secondary">2. Upload Candidate Resumes (Select Multiple)</label>
+                            <input type="file" name="files" class="form-control bg-transparent text-white border-secondary" multiple required style="border-radius: 10px;">
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary-custom w-100"><i class="bi bi-cpu me-1"></i> Screen & Rank</button>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Ranking Table (Rendered if rankedResumes is not null) -->
+                <div th:if="${rankedResumes != null}" class="mt-4 border-top pt-4" style="border-color: rgba(255,255,255,0.05) !important;">
+                    <h5 class="fw-bold mb-3 text-primary"><i class="bi bi-list-ol me-2"></i> Candidate Rankings for <span th:text="${selectedJob.title}">Job</span></h5>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle table-dark table-borderless" id="rankingTable" style="border-radius: 12px; overflow: hidden;">
+                            <thead>
+                                <tr class="table-active">
+                                    <th class="ps-3 py-3" style="font-size: 0.85rem;">Rank</th>
+                                    <th style="font-size: 0.85rem;">Candidate Name</th>
+                                    <th style="font-size: 0.85rem;">ATS Score</th>
+                                    <th style="font-size: 0.85rem;">Skills Match</th>
+                                    <th style="font-size: 0.85rem;">Experience Match</th>
+                                    <th style="font-size: 0.85rem;">Education</th>
+                                    <th style="font-size: 0.85rem;">Formatting</th>
+                                    <th class="text-end pe-3" style="font-size: 0.85rem;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="res, iter : ${rankedResumes}">
+                                    <td class="ps-3 py-3 fw-bold text-success" th:text="${iter.count}">1</td>
+                                    <td>
+                                        <div class="fw-semibold text-white" th:text="${res.extractedName != null ? res.extractedName : res.fileName}">Candidate Name</div>
+                                        <div class="small text-secondary" style="font-size: 0.75rem;" th:text="${res.extractedEmail}">email@example.com</div>
+                                    </td>
+                                    <td>
+                                        <span class="badge-custom text-uppercase" 
+                                              th:classappend="${res.atsScore >= 90} ? 'badge-score-excellent' : (${res.atsScore >= 80} ? 'badge-score-strong' : (${res.atsScore >= 70} ? 'badge-score-good' : (${res.atsScore >= 60} ? 'badge-score-needs-improvement' : 'badge-score-poor')))"
+                                              th:text="${res.atsScore + '%'}">76%</span>
+                                    </td>
+                                    <td class="small text-secondary" th:text="${res.skillsScore + '%'}">80%</td>
+                                    <td class="small text-secondary" th:text="${res.experienceScore + '%'}">70%</td>
+                                    <td class="small text-secondary text-truncate" style="max-width: 150px;" th:text="${#strings.isEmpty(res.sectionEducation) ? 'Not Listed' : res.sectionEducation}">B.Tech</td>
+                                    <td class="small text-secondary" th:text="${res.formattingScore + '%'}">90%</td>
+                                    <td class="text-end pe-3">
+                                        <a th:href="@{/resume/report/{id}(id=${res.id})}" class="btn btn-sm btn-outline-custom"><i class="bi bi-eye"></i> View Report</a>
+                                        <a th:href="@{/resume/download/{id}(id=${res.id})}" class="btn btn-sm btn-outline-secondary border-0"><i class="bi bi-download"></i></a>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tables Grid -->
+            <div class="row g-4">
+                <!-- Job management -->
+                <div class="col-lg-6">
+                    <div class="card-glass border-0">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h5 class="fw-bold mb-0"><i class="bi bi-briefcase text-primary me-2"></i> Manage Jobs catalog</h5>
+                            <button class="btn btn-primary-custom btn-sm" data-bs-toggle="modal" data-bs-target="#addJobModal"><i class="bi bi-plus-lg"></i> Add Job</button>
+                        </div>
+                        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                            <table class="table table-hover align-middle table-dark table-borderless" style="border-radius: 12px; overflow: hidden;">
+                                <thead>
+                                    <tr class="table-active">
+                                        <th class="ps-3 py-3" style="font-size: 0.85rem;">Role Title</th>
+                                        <th style="font-size: 0.85rem;">Company</th>
+                                        <th class="text-end pe-3" style="font-size: 0.85rem;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="job : ${jobs}">
+                                        <td class="fw-semibold ps-3 py-3 small text-white" th:text="${job.title}">Title</td>
+                                        <td class="small text-secondary" th:text="${job.company}">Company</td>
+                                        <td class="text-end pe-3">
+                                            <form th:action="@{/admin/jobs/delete/{id}(id=${job.id})}" method="post" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this job posting?');">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger border-0"><i class="bi bi-trash"></i></button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent scans -->
+                <div class="col-lg-6">
+                    <div class="card-glass border-0">
+                        <h5 class="fw-bold mb-4"><i class="bi bi-activity text-info me-2"></i> Recent Platform Scans</h5>
+                        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                            <table class="table table-hover align-middle table-dark table-borderless" style="border-radius: 12px; overflow: hidden;">
+                                <thead>
+                                    <tr class="table-active">
+                                        <th class="ps-3 py-3" style="font-size: 0.85rem;">User</th>
+                                        <th style="font-size: 0.85rem;">Matched Role</th>
+                                        <th class="pe-3" style="font-size: 0.85rem;">Score</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="resume : ${resumes}">
+                                        <td class="ps-3 py-3 small text-white"><i class="bi bi-person-circle me-2 text-primary"></i> <span th:text="${resume.user.username}">User</span></td>
+                                        <td class="small text-secondary" th:text="${resume.jobTitleMatched}">Role</td>
+                                        <td class="pe-3">
+                                            <span class="badge-custom"
+                                                  th:classappend="${resume.atsScore >= 80} ? 'badge-success' : (${resume.atsScore >= 60} ? 'badge-warning' : 'badge-danger')"
+                                                  th:text="${resume.atsScore + '%'}">0%</span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Job Modal -->
+    <div class="modal fade" id="addJobModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content bg-dark text-white border-secondary" style="border-radius: 20px;">
+                <div class="modal-header border-bottom border-secondary">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-plus-lg me-2"></i> Add New Target Profile</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form th:action="@{/admin/jobs/add}" th:object="${newJob}" method="post">
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold small">Job Title</label>
+                                <input type="text" th:field="*{title}" class="form-control bg-transparent text-white border-secondary" required style="border-radius: 10px;">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold small">Company Name</label>
+                                <input type="text" th:field="*{company}" class="form-control bg-transparent text-white border-secondary" required style="border-radius: 10px;">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold small">Location</label>
+                                <input type="text" th:field="*{location}" class="form-control bg-transparent text-white border-secondary" style="border-radius: 10px;">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold small">Experience Needed</label>
+                                <input type="text" th:field="*{experienceRequired}" class="form-control bg-transparent text-white border-secondary" style="border-radius: 10px;">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold small">Salary Range</label>
+                                <input type="text" th:field="*{salary}" class="form-control bg-transparent text-white border-secondary" style="border-radius: 10px;">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-semibold small">Job Description</label>
+                                <textarea th:field="*{description}" class="form-control bg-transparent text-white border-secondary" rows="3" required style="border-radius: 10px;"></textarea>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-semibold small">Required Skills (Comma separated)</label>
+                                <textarea th:field="*{requiredSkills}" class="form-control bg-transparent text-white border-secondary" rows="2" placeholder="Java, Spring Boot, MySQL" required style="border-radius: 10px;"></textarea>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-semibold small">Keywords (Comma separated)</label>
+                                <textarea th:field="*{keywords}" class="form-control bg-transparent text-white border-secondary" rows="2" placeholder="Backend, API, Developer" style="border-radius: 10px;"></textarea>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-semibold small">Additional Requirements</label>
+                                <textarea th:field="*{requirements}" class="form-control bg-transparent text-white border-secondary" rows="2" style="border-radius: 10px;"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-top border-secondary">
+                        <button type="button" class="btn btn-secondary-custom" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary-custom">Save Profile</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

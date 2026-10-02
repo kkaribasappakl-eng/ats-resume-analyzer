@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - CareerBoost AI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link th:href="@{/css/style.css}" rel="stylesheet">
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <div class="sidebar">
+            <a class="sidebar-brand" th:href="@{/dashboard}">
+                <i class="bi bi-cpu ai-glow text-primary"></i>
+                <span>CareerBoost AI</span>
+            </a>
+            <ul class="sidebar-menu">
+                <li>
+                    <a class="sidebar-link active" th:href="@{/dashboard}">
+                        <i class="bi bi-grid-fill"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li>
+                    <a class="sidebar-link" th:href="@{/resume/analyze}">
+                        <i class="bi bi-cloud-arrow-up-fill"></i>
+                        <span>Analyze Resume</span>
+                    </a>
+                </li>
+                <li>
+                    <a class="sidebar-link" th:href="@{/resume/my-resumes}">
+                        <i class="bi bi-file-earmark-person-fill"></i>
+                        <span>My Resumes</span>
+                    </a>
+                </li>
+                <li>
+                    <a class="sidebar-link" th:href="@{/jobs}">
+                        <i class="bi bi-briefcase-fill"></i>
+                        <span>Job Profiles</span>
+                    </a>
+                </li>
+                <li th:if="${role == 'ROLE_ADMIN'}">
+                    <a class="sidebar-link" th:href="@{/admin}">
+                        <i class="bi bi-shield-lock-fill"></i>
+                        <span>Admin Console</span>
+                    </a>
+                </li>
+            </ul>
+            <div class="sidebar-footer">
+                <div class="dropdown">
+                    <div class="user-profile-widget dropdown-toggle" data-bs-toggle="dropdown" style="cursor: pointer;">
+                        <div class="user-avatar" th:text="${#strings.substring(username, 0, 1).toUpperCase()}">U</div>
+                        <div class="flex-grow-1 overflow-hidden" style="max-width: 130px;">
+                            <h6 class="mb-0 text-truncate text-white" th:text="${username}">User</h6>
+                            <small class="text-muted text-truncate d-block" th:text="${role}">Standard User</small>
+                        </div>
+                    </div>
+                    <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end shadow">
+                        <li><a class="dropdown-item text-danger" th:href="@{/logout}"><i class="bi bi-box-arrow-right me-2"></i> Logout</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="main-content">
+            <!-- Header bar -->
+            <div class="top-navbar">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge badge-primary"><i class="bi bi-stars"></i> Premium Account</span>
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                    <button class="theme-toggle-btn" id="theme-toggle">
+                        <i class="bi bi-sun-fill fs-5" id="sun-icon"></i>
+                        <i class="bi bi-moon-stars-fill fs-5 d-none" id="moon-icon"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Welcome banner -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="fw-bold mb-1">Welcome back, <span class="text-primary" th:text="${username}">User</span>!</h2>
+                    <p class="text-secondary mb-0">Here is your resume analytics and career readiness dashboard.</p>
+                </div>
+                <a th:href="@{/resume/analyze}" class="btn btn-primary-custom"><i class="bi bi-plus-lg"></i> New Analysis</a>
+            </div>
+
+            <!-- Analyzing Resume Details banner (Requirement 4) -->
+            <div class="card-glass border-0 mb-4 p-3 rounded-3" th:each="r : ${history}" th:if="${r.status == 'Active'}">
+                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 text-secondary small">
+                    <div><i class="bi bi-shield-check text-primary me-2"></i><strong>Analyzing:</strong> <span class="text-white fw-semibold" th:text="${r.resumeName}">Resume V2</span></div>
+                    <div><strong>Resume Name:</strong> <span class="text-white" th:text="${r.resumeName}">Resume V2</span></div>
+                    <div><strong>Uploaded On:</strong> <span class="text-white" th:text="${#temporals.format(r.createdAt, 'dd MMM yyyy, hh:mm a')}">Date</span></div>
+                    <div><strong>Version:</strong> <span class="badge bg-primary text-white" th:text="'V' + ${r.versionNumber}">V2</span></div>
+                </div>
+            </div>
+
+            <!-- Stats grid -->
+            <div class="row g-4 mb-4">
+                <div class="col-md-3">
+                    <div class="card-glass border-0 h-100 d-flex align-items-center flex-row py-3">
+                        <div class="p-3 rounded-circle bg-primary bg-opacity-10 text-primary me-3">
+                            <i class="bi bi-file-earmark-bar-graph fs-3"></i>
+                        </div>
+                        <div>
+                            <h6 class="text-secondary small mb-1">Total Analyzed</h6>
+                            <h3 class="fw-bold mb-0" th:text="${uploadCount}">0</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card-glass border-0 h-100 d-flex align-items-center flex-row py-3">
+                        <div class="p-3 rounded-circle bg-info bg-opacity-10 text-info me-3">
+                            <i class="bi bi-activity fs-3"></i>
+                        </div>
+                        <div>
+                            <h6 class="text-secondary small mb-1">Average ATS</h6>
+                            <h3 class="fw-bold mb-0"><span th:text="${avgScore}">0</span>%</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card-glass border-0 h-100 d-flex align-items-center flex-row py-3">
+                        <div class="p-3 rounded-circle bg-success bg-opacity-10 text-success me-3">
+                            <i class="bi bi-trophy fs-3"></i>
+                        </div>
+                        <div>
+                            <h6 class="text-secondary small mb-1">Highest ATS</h6>
+                            <h3 class="fw-bold text-success mb-0"><span th:text="${bestScore}">0</span>%</h3>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card-glass border-0 h-100 d-flex align-items-center flex-row py-3">
+                        <div class="p-3 rounded-circle bg-warning bg-opacity-10 text-warning me-3">
+                            <i class="bi bi-patch-check fs-3"></i>
+                        </div>
+                        <div>
+                            <h6 class="text-secondary small mb-1">Readiness Level</h6>
+                            <h3 class="fw-bold text-warning mb-0">
+                                <span th:text="${latest != null ? latest.careerReadinessScore : 0}">0</span>%
+                            </h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard Analytics Grid -->
+            <div class="row g-4">
+                <!-- Trend Chart -->
+                <div class="col-lg-8">
+                    <div class="card-glass border-0 h-100">
+                        <h5 class="fw-bold mb-4"><i class="bi bi-graph-up-arrow text-primary me-2"></i> Performance Trend</h5>
+                        <div th:if="${#lists.isEmpty(history)}" class="text-center py-5">
+                            <i class="bi bi-graph-down text-muted fs-1 mb-3 d-block"></i>
+                            <p class="text-muted mb-0">No data available. Analyze a resume to see your trend.</p>
+                        </div>
+                        <div th:if="${!#lists.isEmpty(history)}" class="chart-container">
+                            <canvas id="trendChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Scans -->
+                <div class="col-lg-4">
+                    <div class="card-glass border-0 h-100">
+                        <h5 class="fw-bold mb-4"><i class="bi bi-clock-history text-accent me-2" style="color: var(--accent-color)"></i> Recent Activity</h5>
+                        
+                        <div th:if="${#lists.isEmpty(history)}" class="text-center py-5">
+                            <p class="text-muted mb-0">No analysis activity yet.</p>
+                        </div>
+
+                        <div class="d-flex flex-column gap-3" th:if="${!#lists.isEmpty(history)}">
+                            <div class="d-flex justify-content-between align-items-center p-3 rounded-3 border" style="border-color: var(--border-color) !important; background: var(--bg-primary);" th:each="resume, iterStat : ${history}" th:if="${iterStat.index < 4}">
+                                <div class="overflow-hidden me-2">
+                                    <h6 class="fw-bold mb-1 text-truncate" th:text="${resume.fileName}">resume.pdf</h6>
+                                    <p class="text-muted small mb-0" th:text="${#temporals.format(resume.createdAt, 'MMM dd, yyyy')}">Date</p>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge-custom" 
+                                          th:classappend="${resume.atsScore >= 80} ? 'badge-success' : (${resume.atsScore >= 60} ? 'badge-warning' : 'badge-danger')"
+                                          th:text="${resume.atsScore + '%'}">0%</span>
+                                    <a th:href="@{/resume/report/{id}(id=${resume.id})}" class="btn btn-sm btn-outline-custom p-1 px-2"><i class="bi bi-eye"></i></a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Skills Gap Analytics -->
+                <div class="col-12 mt-4" th:if="${latest != null}">
+                    <div class="card-glass border-0">
+                        <h5 class="fw-bold mb-4"><i class="bi bi-tags text-primary me-2"></i> Skills Gap Analysis (Latest Scan: <span th:text="${latest.jobTitleMatched}">Role</span>)</h5>
+                        <div class="row g-4">
+                            <div class="col-md-6">
+                                <h6 class="fw-bold text-success mb-3"><i class="bi bi-check-circle-fill"></i> Matched Keywords/Skills</h6>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <span th:each="skill : ${#strings.listSplit(latest.skillsFound, ',')}" 
+                                          th:if="${!#strings.isEmpty(skill.trim())}"
+                                          class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-20 px-3 py-2 rounded-3 text-capitalize"
+                                          th:text="${skill.trim()}"></span>
+                                    <p class="text-muted small mb-0" th:if="${#strings.isEmpty(latest.skillsFound)}">No matching skills identified.</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="fw-bold text-danger mb-3"><i class="bi bi-x-circle-fill"></i> Top Missing Skills</h6>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <span th:each="skill : ${#strings.listSplit(latest.skillsMissing, ',')}" 
+                                          th:if="${!#strings.isEmpty(skill.trim())}"
+                                          class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-20 px-3 py-2 rounded-3 text-capitalize"
+                                          th:text="${skill.trim()}"></span>
+                                    <p class="text-muted small mb-0" th:if="${#strings.isEmpty(latest.skillsMissing)}">Excellent! No missing skills.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script th:src="@{/js/main.js}"></script>
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        document.addEventListener('DOMContentLoaded', () => {
+            const trendDates = /*[[${trendDates}]]*/ [];
+            const trendScores = /*[[${trendScores}]]*/ [];
+            if(trendDates.length > 0) {
+                initializeTrendChart(trendDates, trendScores);
+            }
+        });
+        /*]]>*/
+    </script>
+</body>
+</html>

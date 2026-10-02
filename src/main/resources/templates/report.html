@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analysis Report - CareerBoost AI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link th:href="@{/css/style.css}" rel="stylesheet">
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- Sidebar Navigation (no-print) -->
+        <div class="sidebar no-print">
+            <a class="sidebar-brand" th:href="@{/dashboard}">
+                <i class="bi bi-cpu ai-glow text-primary"></i>
+                <span>CareerBoost AI</span>
+            </a>
+            <ul class="sidebar-menu">
+                <li>
+                    <a class="sidebar-link" th:href="@{/dashboard}">
+                        <i class="bi bi-grid-fill"></i>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li>
+                    <a class="sidebar-link active" th:href="@{/resume/analyze}">
+                        <i class="bi bi-cloud-arrow-up-fill"></i>
+                        <span>Analyze Resume</span>
+                    </a>
+                </li>
+                <li>
+                    <a class="sidebar-link" th:href="@{/resume/my-resumes}">
+                        <i class="bi bi-file-earmark-person-fill"></i>
+                        <span>My Resumes</span>
+                    </a>
+                </li>
+                <li>
+                    <a class="sidebar-link" th:href="@{/jobs}">
+                        <i class="bi bi-briefcase-fill"></i>
+                        <span>Job Profiles</span>
+                    </a>
+                </li>
+                <li th:if="${role == 'ROLE_ADMIN' || #strings.toString(role) == 'ROLE_ADMIN'}">
+                    <a class="sidebar-link" th:href="@{/admin}">
+                        <i class="bi bi-shield-lock-fill"></i>
+                        <span>Admin Console</span>
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="main-content" id="reportContent">
+            <!-- Header bar (no-print) -->
+            <div class="top-navbar no-print">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge badge-primary"><i class="bi bi-file-earmark-check"></i> Analysis Complete</span>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <a th:href="@{/dashboard}" class="btn btn-secondary-custom btn-sm"><i class="bi bi-arrow-left me-1"></i> Dashboard</a>
+                    <button onclick="downloadPDF()" class="btn btn-primary-custom btn-sm"><i class="bi bi-file-earmark-pdf me-1"></i> Download PDF</button>
+                </div>
+            </div>
+
+            <!-- Report Header -->
+            <div class="mb-4 border-bottom pb-4" style="border-color: var(--border-color) !important;">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h2 class="fw-bold mb-0 text-truncate" style="max-width: 70%;" th:text="${resume.fileName}">resume.pdf</h2>
+                    <span class="text-muted small" th:text="${#temporals.format(resume.createdAt, 'dd MMM yyyy, hh:mm a')}">Date</span>
+                </div>
+                
+                <!-- Analyzed Resume Details -->
+                <div class="card-glass p-3 mb-3 border-0 rounded-3 text-start">
+                    <div class="row g-3 text-secondary small">
+                        <div class="col-md-3">
+                            <strong>Candidate Name:</strong> 
+                            <span class="text-white" th:text="${resume.extractedName != null ? resume.extractedName : 'Not Parsed'}">Candidate Name</span>
+                            <span th:if="${resume.confidenceName != null && resume.confidenceName > 0}" 
+                                  th:style="${resume.confidenceName >= 90} ? 'color: #10b981;' : (${resume.confidenceName >= 70} ? 'color: #eab308;' : 'color: #ef4444;')" 
+                                  th:text="' (' + ${resume.confidenceName} + '%)'"></span>
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Email:</strong> 
+                            <span class="text-white" th:text="${resume.extractedEmail != null ? resume.extractedEmail : 'Not Found'}">email@example.com</span>
+                            <span th:if="${resume.confidenceEmail != null && resume.confidenceEmail > 0}" 
+                                  th:style="${resume.confidenceEmail >= 90} ? 'color: #10b981;' : (${resume.confidenceEmail >= 70} ? 'color: #eab308;' : 'color: #ef4444;')" 
+                                  th:text="' (' + ${resume.confidenceEmail} + '%)'"></span>
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Phone:</strong> 
+                            <span class="text-white" th:text="${resume.extractedPhone != null ? resume.extractedPhone : 'Not Found'}">+1-234-567-890</span>
+                            <span th:if="${resume.confidencePhone != null && resume.confidencePhone > 0}" 
+                                  th:style="${resume.confidencePhone >= 90} ? 'color: #10b981;' : (${resume.confidencePhone >= 70} ? 'color: #eab308;' : 'color: #ef4444;')" 
+                                  th:text="' (' + ${resume.confidencePhone} + '%)'"></span>
+                        </div>
+                        <div class="col-md-3"><strong>Version:</strong> <span class="badge bg-primary text-white" th:text="'V' + ${resume.versionNumber}">V1</span></div>
+                        
+                        <div class="col-md-4">
+                            <strong>LinkedIn:</strong> 
+                            <a th:if="${resume.extractedLinkedin != null && resume.extractedLinkedin != 'Not Found'}" th:href="${resume.extractedLinkedin}" target="_blank" class="text-info text-decoration-none"><i class="bi bi-linkedin"></i> Profile</a>
+                            <span th:if="${resume.extractedLinkedin == null || resume.extractedLinkedin == 'Not Found'}" class="text-muted">Not Found</span>
+                            <span th:if="${resume.confidenceLinkedin != null && resume.confidenceLinkedin > 0}" 
+                                  th:style="${resume.confidenceLinkedin >= 90} ? 'color: #10b981;' : (${resume.confidenceLinkedin >= 70} ? 'color: #eab308;' : 'color: #ef4444;')" 
+                                  th:text="' (' + ${resume.confidenceLinkedin} + '%)'"></span>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>GitHub:</strong> 
+                            <a th:if="${resume.extractedGithub != null && resume.extractedGithub != 'Not Found'}" th:href="${resume.extractedGithub}" target="_blank" class="text-info text-decoration-none"><i class="bi bi-github"></i> Repository</a>
+                            <span th:if="${resume.extractedGithub == null || resume.extractedGithub == 'Not Found'}" class="text-muted">Not Found</span>
+                            <span th:if="${resume.confidenceGithub != null && resume.confidenceGithub > 0}" 
+                                  th:style="${resume.confidenceGithub >= 90} ? 'color: #10b981;' : (${resume.confidenceGithub >= 70} ? 'color: #eab308;' : 'color: #ef4444;')" 
+                                  th:text="' (' + ${resume.confidenceGithub} + '%)'"></span>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Portfolio/Other:</strong> 
+                            <a th:if="${resume.extractedPortfolio != null && resume.extractedPortfolio != 'Not Found'}" th:href="${resume.extractedPortfolio}" target="_blank" class="text-info text-decoration-none"><i class="bi bi-globe"></i> Website</a>
+                            <span th:if="${resume.extractedPortfolio == null || resume.extractedPortfolio == 'Not Found'}" class="text-muted">Not Found</span>
+                            <span th:if="${resume.confidencePortfolio != null && resume.confidencePortfolio > 0}" 
+                                  th:style="${resume.confidencePortfolio >= 90} ? 'color: #10b981;' : (${resume.confidencePortfolio >= 70} ? 'color: #eab308;' : 'color: #ef4444;')" 
+                                  th:text="' (' + ${resume.confidencePortfolio} + '%)'"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <p class="text-secondary fs-5 mb-0">ATS Audit Target Profile: <strong class="text-primary" th:text="${resume.jobTitleMatched}">Role</strong></p>
+            </div>
+
+            <!-- Dynamic Two-Column Layout (LinkedIn Recruiter / Lever Style) -->
+            <div class="row align-items-start g-4">
+                
+                <!-- Left Column -->
+                <div class="col-lg-6 d-flex flex-column gap-4">
+                    
+                    <!-- Recruiter 15s Summary Card -->
+                    <div class="card-glass p-4 border-0" th:if="${resume.recruiterSummary != null}">
+                        <div class="d-flex align-items-center gap-2 mb-3 text-warning">
+                            <i class="bi bi-person-badge-fill fs-5"></i>
+                            <h5 class="fw-bold mb-0">Recruiter 15s Summary</h5>
+                        </div>
+                        <div class="text-secondary small" th:utext="${resume.recruiterSummary}">
+                            Recruiter summary recommendations...
+                        </div>
+                    </div>
+                    
+                    <!-- 1. Overall ATS Score & Breakdown -->
+                    <div class="card-glass p-4 border-0">
+                        <div class="row align-items-center g-3">
+                            <div class="col-md-5 text-center d-flex flex-column align-items-center">
+                                <h6 class="fw-bold text-secondary mb-3">Overall ATS Score</h6>
+                                <div class="position-relative d-inline-flex align-items-center justify-content-center mb-3">
+                                    <svg width="130" height="130" viewBox="0 0 140 140">
+                                        <circle cx="70" cy="70" r="60" stroke="var(--border-color)" stroke-width="12" fill="transparent"/>
+                                        <circle cx="70" cy="70" r="60"
+                                                th:stroke="${resume.atsScore >= 90} ? '#10b981' : (${resume.atsScore >= 80} ? '#0ea5e9' : (${resume.atsScore >= 70} ? '#eab308' : (${resume.atsScore >= 60} ? '#f97316' : '#ef4444')))"
+                                                stroke-width="12" fill="transparent"
+                                                stroke-dasharray="376.99"
+                                                th:stroke-dashoffset="${376.99 - (376.99 * (resume.atsScore != null ? resume.atsScore : 0) / 100)}"
+                                                stroke-linecap="round"
+                                                style="transform: rotate(-90deg); transform-origin: 50% 50%; transition: stroke-dashoffset 1.5s ease-out;"/>
+                                    </svg>
+                                    <div class="position-absolute d-flex align-items-baseline">
+                                        <span class="fs-2 fw-bold text-white" th:text="${resume.atsScore}">0</span><span class="small text-secondary">%</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-2">
+                                    <span class="badge-custom text-uppercase" 
+                                          th:classappend="${resume.atsScore >= 90} ? 'badge-score-excellent' : (${resume.atsScore >= 80} ? 'badge-score-strong' : (${resume.atsScore >= 70} ? 'badge-score-good' : (${resume.atsScore >= 60} ? 'badge-score-needs-improvement' : 'badge-score-poor')))"
+                                          th:text="${resume.atsScore >= 90} ? 'Excellent' : (${resume.atsScore >= 80} ? 'Strong' : (${resume.atsScore >= 70} ? 'Good' : (${resume.atsScore >= 60} ? 'Needs Improvement' : 'Poor')))">Status</span>
+                                </div>
+                                <p class="text-secondary small mb-2 px-2" style="font-size: 0.8rem;" th:text="'Matches ' + ${resume.atsScore} + '% of requirements.'"></p>
+                                <button class="btn btn-outline-custom btn-sm py-1 px-3 w-100 mt-1" style="font-size: 0.75rem;" data-bs-toggle="modal" data-bs-target="#whyThisScoreModal"><i class="bi bi-question-circle"></i> Why This Score?</button>
+                            </div>
+                            
+                            <div class="col-md-7 border-start" style="border-color: rgba(255,255,255,0.05) !important;">
+                                <h6 class="fw-bold mb-3 small" style="font-size: 0.8rem;"><i class="bi bi-list-check text-primary me-1"></i> ATS Breakdown</h6>
+                                <div class="d-flex flex-column gap-2 small text-secondary">
+                                    <div class="d-flex justify-content-between">
+                                        <span>Skills:</span>
+                                        <span class="text-white" th:text="${#numbers.formatDecimal(resume.skillsScore * 0.25, 1, 0)} + ' / 25'">22 / 25</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span>Keywords:</span>
+                                        <span class="text-white" th:text="${#numbers.formatDecimal(resume.keywordMatchScore * 0.25, 1, 0)} + ' / 25'">18 / 25</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span>Projects:</span>
+                                        <span class="text-white" th:text="${#numbers.formatDecimal(resume.projectScore * 0.15, 1, 0)} + ' / 15'">12 / 15</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span>Experience:</span>
+                                        <span class="text-white" th:text="${#numbers.formatDecimal(resume.experienceScore * 0.10, 1, 0)} + ' / 10'">8 / 10</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span>Education:</span>
+                                        <span class="text-white" th:text="${#numbers.formatDecimal(resume.educationScore * 0.10, 1, 0)} + ' / 10'">9 / 10</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span>Formatting:</span>
+                                        <span class="text-white" th:text="${#numbers.formatDecimal(resume.formattingScore * 0.10, 1, 0)} + ' / 10'">7 / 10</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span>Certifications:</span>
+                                        <span class="text-white" th:text="${#numbers.formatDecimal(resume.certificationsScore * 0.05, 1, 0)} + ' / 5'">0 / 5</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <span>Achievements:</span>
+                                        <span class="text-white" id="breakdownAchievements">0 / 5</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between border-top pt-2 mt-1 fw-bold text-white" style="border-color: rgba(255,255,255,0.05) !important;">
+                                        <span>Total:</span>
+                                        <span th:text="${resume.atsScore} + ' / 100'">76 / 100</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 2. Dimension Radar Map -->
+                    <div class="card-glass border-0">
+                        <h6 class="fw-bold mb-2"><i class="bi bi-radar text-primary me-1"></i> Dimension Radar Map</h6>
+                        <div class="chart-container" style="height: 320px; position: relative;">
+                            <canvas id="radarChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- 3. Grammar & Readability Audit -->
+                    <div class="card-glass border-0">
+                        <h5 class="fw-bold mb-3"><i class="bi bi-pencil-square text-warning me-2"></i> Grammar & Readability Audit</h5>
+                        <div class="text-secondary small" style="line-height: 1.6;" th:utext="${#strings.isEmpty(resume.grammarDetails) ? '✓ No grammatical warnings or weak action verbs identified.' : resume.grammarDetails}">
+                            Grammar warnings...
+                        </div>
+                    </div>
+                    
+                    <!-- 4. Projects STAR Metrics Check -->
+                    <div class="card-glass border-0">
+                        <h5 class="fw-bold mb-3"><i class="bi bi-folder-check text-success me-2"></i> Projects STAR Metrics Check</h5>
+                        <div class="text-secondary small" style="line-height: 1.6;" th:utext="${#strings.isEmpty(resume.projectAnalysis) ? 'No project information extracted.' : resume.projectAnalysis}">
+                            Project suggestions...
+                        </div>
+                    </div>
+                    
+                    <!-- 5. Advanced AI Suggestions -->
+                    <div class="card-glass border-0">
+                        <h5 class="fw-bold mb-3"><i class="bi bi-lightbulb-fill text-warning me-2"></i> Advanced AI Suggestions</h5>
+                        <div class="suggestion-list text-secondary small" style="line-height: 1.6;" th:utext="${resume.suggestions}">
+                            No suggestions available.
+                        </div>
+                    </div>
+                    
+                </div>
+                
+                <!-- Right Column -->
+                <div class="col-lg-6 d-flex flex-column gap-4">
+                    
+                    <!-- 1. Placement Target Card -->
+                    <div class="card-glass border-0">
+                        <h6 class="fw-bold mb-3"><i class="bi bi-rocket-takeoff text-warning me-1"></i> Placement Target</h6>
+                        <div class="d-flex flex-column gap-2 small text-secondary">
+                            <div class="d-flex justify-content-between border-bottom pb-2" style="border-color: rgba(255,255,255,0.05) !important;">
+                                <span>Current Score:</span>
+                                <span class="text-white fw-bold" th:text="${resume.atsScore + '%'}">76%</span>
+                            </div>
+                            <div class="d-flex justify-content-between border-bottom pb-2" style="border-color: rgba(255,255,255,0.05) !important;">
+                                <span>Estimated Score:</span>
+                                <span class="text-success fw-bold" th:text="${resume.projectedAtsScore + '%'}">91%</span>
+                            </div>
+                            <div class="d-flex justify-content-between border-bottom pb-2" style="border-color: rgba(255,255,255,0.05) !important;">
+                                <span>Score Change:</span>
+                                <span class="fw-bold" 
+                                      th:style="${previousScore != null ? (resume.atsScore >= previousScore ? 'color: #10b981;' : 'color: #ef4444;') : 'color: #eab308;'}"
+                                      th:text="${previousScore != null ? (resume.atsScore >= previousScore ? '+' + (resume.atsScore - previousScore) : (resume.atsScore - previousScore)) : 'N/A'}">+10</span>
+                            </div>
+                            <div class="d-flex justify-content-between border-bottom pb-2" style="border-color: rgba(255,255,255,0.05) !important;">
+                                <span>Potential Improvement:</span>
+                                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25" th:text="'+' + ${resume.projectedAtsScore - resume.atsScore} + '%'">+15%</span>
+                            </div>
+                            <div class="d-flex justify-content-between border-bottom pb-2" style="border-color: rgba(255,255,255,0.05) !important;">
+                                <span>Placement Readiness:</span>
+                                <span class="fw-bold" 
+                                      th:style="${resume.careerReadinessScore >= 85} ? 'color: #10b981;' : (${resume.careerReadinessScore >= 60} ? 'color: #eab308;' : 'color: #ef4444;')"
+                                      th:text="${resume.careerReadinessScore >= 85} ? 'High' : (${resume.careerReadinessScore >= 60} ? 'Medium' : 'Low')">High</span>
+                            </div>
+                            <div class="d-flex justify-content-between pb-1">
+                                <span>Estimated Shortlisting:</span>
+                                <span class="fw-bold"
+                                      th:style="${resume.atsScore >= 80} ? 'color: #10b981;' : (${resume.atsScore >= 70} ? 'color: #0ea5e9;' : (${resume.atsScore >= 60} ? 'color: #eab308;' : 'color: #ef4444;'))"
+                                      th:text="${resume.atsScore >= 80} ? 'Very Good' : (${resume.atsScore >= 70} ? 'Good' : (${resume.atsScore >= 60} ? 'Fair' : 'Poor'))">Very Good</span>
+                            </div>
+                        </div>
+                        <div class="border-top pt-3 mt-3" style="border-color: rgba(255,255,255,0.05) !important;">
+                            <h6 class="fw-bold text-secondary small mb-2"><i class="bi bi-info-circle text-primary me-1"></i> Change Reason Breakdown</h6>
+                            <p class="text-secondary small mb-0" style="font-size: 0.8rem;" th:text="${#strings.isEmpty(resume.scoreDifferenceReason) ? 'No previous resume version to compare.' : resume.scoreDifferenceReason}"></p>
+                        </div>
+                    </div>
+                    
+                    <!-- 2. Placement Career Readiness Index -->
+                    <div class="card-glass border-0">
+                        <h5 class="fw-bold mb-4"><i class="bi bi-shield-check text-warning me-2"></i> Placement Career Readiness Index</h5>
+                        <div class="d-flex flex-column align-items-center mb-4 text-center">
+                            <div class="position-relative d-inline-flex align-items-center justify-content-center mb-3">
+                                <svg width="120" height="120" viewBox="0 0 140 140">
+                                    <circle cx="70" cy="70" r="60" stroke="var(--border-color)" stroke-width="10" fill="transparent"/>
+                                    <circle cx="70" cy="70" r="60"
+                                            stroke="#0ea5e9"
+                                            stroke-width="10" fill="transparent"
+                                            stroke-dasharray="376.99"
+                                            th:stroke-dashoffset="${376.99 - (376.99 * (resume.careerReadinessScore != null ? resume.careerReadinessScore : 0) / 100)}"
+                                            stroke-linecap="round"
+                                            style="transform: rotate(-90deg); transform-origin: 50% 50%; transition: stroke-dashoffset 1.5s ease-out;"/>
+                                </svg>
+                                <div class="position-absolute d-flex align-items-baseline">
+                                    <span class="fs-3 fw-bold text-white" th:text="${resume.careerReadinessScore}">0</span><span class="small text-secondary">%</span>
+                                </div>
+                            </div>
+                            <h6 class="fw-bold text-white mb-1">Overall Readiness Index</h6>
+                            <p class="text-secondary small mb-0">Combined placement success potential</p>
+                        </div>
+                        
+                        <div class="row g-3">
+                            <div class="col-md-6" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#scoringExplainModal">
+                                <div class="d-flex justify-content-between small mb-1">
+                                    <span>Technical Skills</span>
+                                    <span class="fw-bold text-white" th:text="${resume.skillsScore + '%'}">0%</span>
+                                </div>
+                                <div class="progress-thin">
+                                    <div class="progress-bar" th:style="'width:' + ${resume.skillsScore} + '%; background-color: ' + (${resume.skillsScore >= 90} ? '#10b981' : (${resume.skillsScore >= 80} ? '#0ea5e9' : (${resume.skillsScore >= 70} ? '#eab308' : (${resume.skillsScore >= 60} ? '#f97316' : '#ef4444'))))"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-6" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#scoringExplainModal">
+                                <div class="d-flex justify-content-between small mb-1">
+                                    <span>Projects</span>
+                                    <span class="fw-bold text-white" th:text="${resume.projectScore + '%'}">0%</span>
+                                </div>
+                                <div class="progress-thin">
+                                    <div class="progress-bar" th:style="'width:' + ${resume.projectScore} + '%; background-color: ' + (${resume.projectScore >= 90} ? '#10b981' : (${resume.projectScore >= 80} ? '#0ea5e9' : (${resume.projectScore >= 70} ? '#eab308' : (${resume.projectScore >= 60} ? '#f97316' : '#ef4444'))))"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-6" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#scoringExplainModal">
+                                <div class="d-flex justify-content-between small mb-1">
+                                    <span>Resume Quality</span>
+                                    <span class="fw-bold text-white" th:text="${(resume.formattingScore + resume.grammarScore) / 2 + '%'}">0%</span>
+                                </div>
+                                <div class="progress-thin">
+                                    <div class="progress-bar" th:style="'width:' + ${(resume.formattingScore + resume.grammarScore) / 2} + '%; background-color: ' + (${(resume.formattingScore + resume.grammarScore) / 2 >= 90} ? '#10b981' : (${(resume.formattingScore + resume.grammarScore) / 2 >= 80} ? '#0ea5e9' : (${(resume.formattingScore + resume.grammarScore) / 2 >= 70} ? '#eab308' : (${(resume.formattingScore + resume.grammarScore) / 2 >= 60} ? '#f97316' : '#ef4444'))))"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-6" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#scoringExplainModal">
+                                <div class="d-flex justify-content-between small mb-1">
+                                    <span>ATS Compatibility</span>
+                                    <span class="fw-bold text-white" th:text="${resume.structureScore + '%'}">0%</span>
+                                </div>
+                                <div class="progress-thin">
+                                    <div class="progress-bar" th:style="'width:' + ${resume.structureScore} + '%; background-color: ' + (${resume.structureScore >= 90} ? '#10b981' : (${resume.structureScore >= 80} ? '#0ea5e9' : (${resume.structureScore >= 70} ? '#eab308' : (${resume.structureScore >= 60} ? '#f97316' : '#ef4444'))))"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-6" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#scoringExplainModal">
+                                <div class="d-flex justify-content-between small mb-1">
+                                    <span>Certifications</span>
+                                    <span class="fw-bold text-white" th:text="${resume.certificationsScore + '%'}">0%</span>
+                                </div>
+                                <div class="progress-thin">
+                                    <div class="progress-bar" th:style="'width:' + ${resume.certificationsScore} + '%; background-color: ' + (${resume.certificationsScore >= 90} ? '#10b981' : (${resume.certificationsScore >= 80} ? '#0ea5e9' : (${resume.certificationsScore >= 70} ? '#eab308' : (${resume.certificationsScore >= 60} ? '#f97316' : '#ef4444'))))"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-6" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#scoringExplainModal">
+                                <div class="d-flex justify-content-between small mb-1">
+                                    <span>Internships</span>
+                                    <span class="fw-bold text-white" th:text="${resume.internshipScore + '%'}">0%</span>
+                                </div>
+                                <div class="progress-thin">
+                                    <div class="progress-bar" th:style="'width:' + ${resume.internshipScore} + '%; background-color: ' + (${resume.internshipScore >= 90} ? '#10b981' : (${resume.internshipScore >= 80} ? '#0ea5e9' : (${resume.internshipScore >= 70} ? '#eab308' : (${resume.internshipScore >= 60} ? '#f97316' : '#ef4444'))))"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-12" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#scoringExplainModal">
+                                <div class="d-flex justify-content-between small mb-1">
+                                    <span>Soft Skills</span>
+                                    <span class="fw-bold text-white" th:text="${resume.softSkillsScore != null ? resume.softSkillsScore + '%' : '0%'}">0%</span>
+                                </div>
+                                <div class="progress-thin">
+                                    <div class="progress-bar" th:style="'width:' + ${resume.softSkillsScore != null ? resume.softSkillsScore : 0} + '%; background-color: ' + (${resume.softSkillsScore != null && resume.softSkillsScore >= 90} ? '#10b981' : (${resume.softSkillsScore != null && resume.softSkillsScore >= 80} ? '#0ea5e9' : (${resume.softSkillsScore != null && resume.softSkillsScore >= 70} ? '#eab308' : (${resume.softSkillsScore != null && resume.softSkillsScore >= 60} ? '#f97316' : '#ef4444'))))"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 3. Key Resume Strengths & Critical Areas to Improve -->
+                    <div class="card-glass border-0">
+                        <h5 class="fw-bold text-success mb-3"><i class="bi bi-hand-thumbs-up-fill me-2"></i> Key Resume Strengths</h5>
+                        <ul class="list-unstyled mb-4 d-flex flex-column gap-2">
+                            <li th:each="str : ${#strings.listSplit(#strings.isEmpty(resume.strengths) ? 'Strong Technical Skillset,Clean Formatting,Proper Resume Length' : resume.strengths, ',')}" class="d-flex align-items-center gap-2 small text-secondary">
+                                <i class="bi bi-check-circle-fill text-success"></i>
+                                <span th:text="${str.trim()}">Strength</span>
+                            </li>
+                        </ul>
+                        
+                        <h5 class="fw-bold text-danger mb-3"><i class="bi bi-hand-thumbs-down-fill me-2"></i> Critical Areas to Improve</h5>
+                        <ul class="list-unstyled mb-0 d-flex flex-column gap-2">
+                            <li th:each="wk : ${#strings.listSplit(#strings.isEmpty(resume.weaknesses) ? 'No Certifications,No Internship,Weak Project Descriptions' : resume.weaknesses, ',')}" class="d-flex align-items-center gap-2 small text-secondary">
+                                <i class="bi bi-exclamation-circle-fill text-danger"></i>
+                                <span th:text="${wk.trim()}">Weakness</span>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <!-- 4. Section Structure & Keywords Gap Analysis -->
+                    <div class="card-glass border-0">
+                        <h5 class="fw-bold mb-3"><i class="bi bi-layout-text-window-reverse text-primary me-2"></i> Section Structure Check</h5>
+                        <div class="mb-3">
+                            <h6 class="fw-bold text-success mb-2 small"><i class="bi bi-check-circle"></i> Present Sections</h6>
+                            <div class="d-flex flex-wrap gap-1">
+                                <span th:each="sec : ${#strings.listSplit(resume.presentSections, ',')}"
+                                      th:if="${!#strings.isEmpty(sec.trim())}"
+                                      class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-10 px-2 py-1 rounded" style="font-size: 0.75rem;" th:text="${sec.trim()}"></span>
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <h6 class="fw-bold text-danger mb-2 small"><i class="bi bi-x-circle"></i> Missing Sections</h6>
+                            <div class="d-flex flex-wrap gap-1">
+                                <span th:each="sec : ${#strings.listSplit(resume.missingSections, ',')}"
+                                      th:if="${!#strings.isEmpty(sec.trim())}"
+                                      class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-10 px-2 py-1 rounded" style="font-size: 0.75rem;" th:text="${sec.trim()}"></span>
+                            </div>
+                        </div>
+                        
+                        <h5 class="fw-bold mb-3 border-top pt-3" style="border-color: rgba(255,255,255,0.05) !important;"><i class="bi bi-tags text-primary me-2"></i> Keywords Frequency & ATS Impact</h5>
+                        <div class="table-responsive mb-4" th:utext="${resume.keywordAnalysisDetails}">
+                            Keyword frequency table...
+                        </div>
+
+                        <h5 class="fw-bold mb-3 border-top pt-3" style="border-color: rgba(255,255,255,0.05) !important;"><i class="bi bi-heart-fill text-danger me-2"></i> Soft Skills Audit Matrix</h5>
+                        <div class="table-responsive" th:utext="${resume.softSkillsAnalysis}">
+                            Soft skills table...
+                        </div>
+                    </div>
+                    
+                    <!-- 5. ATS Formatting Inspector -->
+                    <div class="card-glass border-0">
+                        <h5 class="fw-bold mb-3"><i class="bi bi-layout-text-window-reverse text-info me-2"></i> ATS Formatting Inspector</h5>
+                        <div class="text-secondary small" style="line-height: 1.6;" th:utext="${resume.formattingDetails}">
+                            Formatting status...
+                        </div>
+                    </div>
+                    
+                    <!-- 6. AI Interview Preparation -->
+                    <div class="card-glass border-0">
+                        <h5 class="fw-bold mb-3"><i class="bi bi-question-square-fill text-primary me-2"></i> AI Interview Preparation</h5>
+                        <div class="d-flex flex-column gap-3">
+                            <div th:each="q : ${#strings.listSplit(resume.interviewQuestions, '|||')}" class="p-3 rounded border" style="border-color: rgba(255,255,255,0.05) !important; background: rgba(255,255,255,0.01);">
+                                <p class="text-secondary small mb-0" th:utext="${q}">Question</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 7. Dynamic Improvement Roadmap -->
+                    <div class="card-glass border-0">
+                        <h5 class="fw-bold mb-3"><i class="bi bi-map-fill text-info me-2"></i> Dynamic Improvement Roadmap</h5>
+                        <p class="small text-secondary mb-4" th:text="${resume.aiSummary}">Overview...</p>
+                        <div th:utext="${resume.improvementRoadmapDetails}">
+                            Dynamic improvement roadmap...
+                        </div>
+                    </div>
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Why This Score Modal -->
+    <div class="modal fade" id="whyThisScoreModal" tabindex="-1" aria-labelledby="whyThisScoreModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 card-glass" style="background-color: var(--bg-secondary); border-radius: 24px; box-shadow: var(--card-shadow);">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold text-white" id="whyThisScoreModalLabel"><i class="bi bi-info-circle text-primary me-2"></i> Resume Scoring Analysis</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-start mt-2">
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <h6 class="fw-bold text-success mb-2"><i class="bi bi-plus-circle me-1"></i> Positive Points</h6>
+                            <ul class="small text-secondary mb-3">
+                                <li>All basic parsed contact formats match standard patterns.</li>
+                                <li th:each="sec : ${#strings.listSplit(resume.presentSections, ',')}" th:text="'Present section: ' + ${sec.trim()}">Present section</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="fw-bold text-danger mb-2"><i class="bi bi-dash-circle me-1"></i> Missing Sections</h6>
+                            <ul class="small text-secondary mb-3">
+                                <li th:each="sec : ${#strings.listSplit(resume.missingSections, ',')}" th:text="'Missing section: ' + ${sec.trim()}">Missing section</li>
+                                <li th:if="${#strings.isEmpty(resume.missingSections)}">No standard sections missing!</li>
+                            </ul>
+                        </div>
+                        <div class="col-12">
+                            <h6 class="fw-bold text-warning mb-2"><i class="bi bi-tag me-1"></i> Missing Skills & Keywords</h6>
+                            <div class="d-flex flex-wrap gap-1 mb-3">
+                                <span th:each="skill : ${#strings.listSplit(resume.skillsMissing, ',')}"
+                                      class="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-10 px-2 py-1 rounded" style="font-size: 0.75rem;" th:text="${skill.trim()}"></span>
+                                <span th:if="${#strings.isEmpty(resume.skillsMissing)}" class="text-success small">No missing skills!</span>
+                            </div>
+                        </div>
+                        <div class="col-12 border-top pt-3" style="border-color: rgba(255,255,255,0.05) !important;">
+                            <h6 class="fw-bold text-info mb-2"><i class="bi bi-pencil-square me-1"></i> Formatting & Quality Issues</h6>
+                            <ul class="small text-secondary mb-3">
+                                <li th:if="${resume.formattingScore < 80}">Review email, phone, LinkedIn or GitHub details in formatting.</li>
+                                <li th:if="${resume.grammarScore < 80}">Increase verb density by utilizing strong action verbs at the beginning of phrases.</li>
+                                <li>Avoid double-column tables or text boxes which conflict with standard ATS parsers.</li>
+                            </ul>
+                        </div>
+                        <div class="col-12 border-top pt-3" style="border-color: rgba(255,255,255,0.05) !important;">
+                            <h6 class="fw-bold text-primary mb-2"><i class="bi bi-lightbulb me-1"></i> Suggestions & Projected Improvement</h6>
+                            <div class="small text-secondary mb-3" th:utext="${resume.suggestions}">Suggestions list</div>
+                            <div class="alert bg-success bg-opacity-10 text-success border border-success border-opacity-25 p-3 rounded-3 small">
+                                <i class="bi bi-arrow-up-circle-fill me-1"></i> After applying these improvements, your ATS score is estimated to increase to <strong><span th:text="${resume.projectedAtsScore}">91</span>%</strong>.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary-custom btn-sm" data-bs-dismiss="modal">Close Analysis</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Explainable Scoring Accordion Modal -->
+    <div class="modal fade" id="scoringExplainModal" tabindex="-1" aria-labelledby="scoringExplainModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 card-glass" style="background-color: var(--bg-secondary); border-radius: 24px; box-shadow: var(--card-shadow);">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold text-white" id="scoringExplainModalLabel"><i class="bi bi-shield-check text-primary me-2"></i> Transparent ATS Scoring Auditor</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-start mt-2">
+                    <p class="text-secondary small mb-3">Below is the complete score calculation formulas, deductions, and recommendations generated for each rating segment.</p>
+                    <div th:utext="${resume.explainableScoringDetails}">
+                        Explainable scoring details...
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary-custom btn-sm" data-bs-dismiss="modal">Close Auditor</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating AI Recruiter Chat Bubble -->
+    <button class="btn btn-primary rounded-circle position-fixed d-flex align-items-center justify-content-center shadow-lg" 
+            id="chatBubble"
+            style="bottom: 30px; right: 30px; width: 60px; height: 60px; z-index: 1050; transition: transform 0.3s;">
+        <i class="bi bi-chat-dots-fill fs-4"></i>
+    </button>
+
+    <!-- AI Recruiter Chat Panel -->
+    <div class="card-glass position-fixed shadow-lg d-flex flex-column text-white" 
+         id="chatPanel"
+         style="bottom: 100px; right: 30px; width: 380px; height: 500px; z-index: 1050; display: none !important; border-radius: 20px; overflow: hidden; background: rgba(18, 18, 18, 0.98); border: 1px solid var(--border-color); backdrop-filter: blur(25px);">
+        <!-- Header -->
+        <div class="p-3 border-bottom d-flex justify-content-between align-items-center" style="border-color: rgba(255,255,255,0.05) !important;">
+            <span class="fw-bold small"><i class="bi bi-robot text-primary me-2"></i> AI Recruiter Chat Assistant</span>
+            <button type="button" class="btn-close btn-close-white" id="closeChat" style="font-size: 0.8rem;"></button>
+        </div>
+        <!-- Messages Body -->
+        <div class="flex-grow-1 p-3 overflow-y-auto" id="chatMessages" style="font-size: 0.8rem; line-height: 1.5;">
+            <div class="mb-2 text-start">
+                <span class="p-2 rounded d-inline-block" style="background: rgba(255,255,255,0.05);">Hello! I am your AI Recruiter Assistant. Ask me anything about this candidate's skills, experience, projects, or education.</span>
+            </div>
+        </div>
+        <!-- Input Footer -->
+        <div class="p-2 border-top d-flex gap-2" style="border-color: rgba(255,255,255,0.05) !important;">
+            <input type="text" id="chatInput" class="form-control form-control-sm bg-dark text-white border-0" placeholder="Ask about this resume..." style="box-shadow: none;">
+            <button class="btn btn-sm btn-primary px-3" id="sendChat"><i class="bi bi-send-fill"></i></button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script th:src="@{/js/main.js}"></script>
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeRadarChart({
+                keyword: /*[[${resume.keywordMatchScore}]]*/ 0,
+                skill: /*[[${resume.skillsScore}]]*/ 0,
+                experience: /*[[${resume.experienceScore}]]*/ 0,
+                project: /*[[${resume.projectScore}]]*/ 0,
+                education: /*[[${resume.educationScore}]]*/ 0,
+                format: /*[[${resume.formattingScore}]]*/ 0,
+                grammar: /*[[${resume.grammarScore}]]*/ 0,
+                internship: /*[[${resume.internshipScore}]]*/ 0,
+                certifications: /*[[${resume.certificationsScore}]]*/ 0
+            });
+            
+            // Dynamic Achievements calculations to guarantee safe display value
+            const atsScore = /*[[${resume.atsScore}]]*/ 0;
+            let achVal = Math.min(5, Math.max(1, Math.round(atsScore / 18)));
+            
+            const achElem = document.getElementById('breakdownAchievements');
+            if (achElem) {
+                achElem.textContent = achVal + " / 5";
+            }
+        });
+
+        // Chat Script
+        const resumeId = /*[[${resume.id}]]*/ 0;
+        const chatBubble = document.getElementById('chatBubble');
+        const chatPanel = document.getElementById('chatPanel');
+        const closeChat = document.getElementById('closeChat');
+        const chatInput = document.getElementById('chatInput');
+        const sendChat = document.getElementById('sendChat');
+        const chatMessages = document.getElementById('chatMessages');
+
+        chatBubble.addEventListener('click', () => {
+            if (chatPanel.style.display === 'none' || chatPanel.style.display === '') {
+                chatPanel.style.setProperty('display', 'flex', 'important');
+            } else {
+                chatPanel.style.setProperty('display', 'none', 'important');
+            }
+        });
+
+        closeChat.addEventListener('click', () => {
+            chatPanel.style.setProperty('display', 'none', 'important');
+        });
+
+        function appendMessage(text, isUser) {
+            const div = document.createElement('div');
+            div.className = isUser ? 'mb-2 text-end' : 'mb-2 text-start';
+            const span = document.createElement('span');
+            span.className = 'p-2 rounded d-inline-block';
+            span.style.background = isUser ? 'rgba(14, 165, 233, 0.2)' : 'rgba(255,255,255,0.05)';
+            span.innerHTML = text;
+            div.appendChild(span);
+            chatMessages.appendChild(div);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        async function handleSend() {
+            const text = chatInput.value.trim();
+            if (!text) return;
+            appendMessage(text, true);
+            chatInput.value = '';
+
+            // Add loading indicator
+            const loadDiv = document.createElement('div');
+            loadDiv.className = 'mb-2 text-start';
+            loadDiv.id = 'chatLoadingIndicator';
+            loadDiv.innerHTML = '<span class="p-2 rounded d-inline-block text-muted" style="background: rgba(255,255,255,0.02);"><i class="bi bi-three-dots"></i> Thinking...</span>';
+            chatMessages.appendChild(loadDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            try {
+                const res = await fetch(`/resume/report/${resumeId}/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text })
+                });
+                const data = await res.json();
+                document.getElementById('chatLoadingIndicator').remove();
+                appendMessage(data.response || 'No response received.', false);
+            } catch (err) {
+                document.getElementById('chatLoadingIndicator').remove();
+                appendMessage('Error contacting chat assistant.', false);
+            }
+        }
+
+        sendChat.addEventListener('click', handleSend);
+        chatInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') handleSend();
+        });
+        /*]]>*/
+    </script>
+</body>
+</html>
